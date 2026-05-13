@@ -6,15 +6,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useDeleteColumn } from "@/hooks/queries/useBoards"
+import { useCreateCard } from "@/hooks/queries/useCards"
 import type { Column as ColumnType, Card } from "@/types"
 
-type MockCard = Card & { tags?: string[]; avatar?: string; date?: string }
-
 interface ColumnProps {
-  column: ColumnType & { cards: MockCard[] }
+  column: ColumnType & { cards: Card[] }
+  boardId: string
 }
 
-export function Column({ column }: ColumnProps) {
+export function Column({ column, boardId }: ColumnProps) {
+  const { mutate: deleteColumn } = useDeleteColumn(boardId)
+  const { mutate: createCard } = useCreateCard(boardId)
+
   return (
     <div className="w-80 flex flex-col shrink-0 max-h-full">
       {/* Header */}
@@ -32,8 +36,12 @@ export function Column({ column }: ColumnProps) {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-36">
-            <DropdownMenuItem>Rename</DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-red-600"
+              onClick={() => deleteColumn(column.id)}
+            >
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -43,8 +51,11 @@ export function Column({ column }: ColumnProps) {
         <CardList cards={column.cards} />
       </div>
 
-      {/* Add card */}
-      <button className="flex items-center gap-1.5 mt-3 px-2 py-1.5 rounded-md text-[#94A3B8] text-sm hover:bg-slate-100 hover:text-[#475569] transition-colors w-full">
+      {/* Add card — placeholder, full impl in next phase */}
+      <button
+        onClick={() => createCard({ columnId: column.id, title: "New card" })}
+        className="flex items-center gap-1.5 mt-3 px-2 py-1.5 rounded-md text-[#94A3B8] text-sm hover:bg-slate-100 hover:text-[#475569] transition-colors w-full"
+      >
         <Plus size={14} />
         Add card
       </button>

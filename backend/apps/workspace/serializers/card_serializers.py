@@ -13,11 +13,12 @@ class CardSerializer(serializers.ModelSerializer):
 
 class CardDetailSerializer(serializers.ModelSerializer):
     column_id = serializers.UUIDField(source="column.id", read_only=True)
+    column_title = serializers.CharField(source="column.title", read_only=True)
 
     class Meta:
         model = Card
-        fields = ["id", "column_id", "title", "content_markdown", "content_preview", "position", "created_at", "updated_at"]
-        read_only_fields = ["id", "column_id", "content_preview", "created_at", "updated_at"]
+        fields = ["id", "column_id", "column_title", "title", "content_markdown", "content_preview", "position", "created_at", "updated_at"]
+        read_only_fields = ["id", "column_id", "column_title", "content_preview", "created_at", "updated_at"]
 
 
 class CardMoveSerializer(serializers.Serializer):

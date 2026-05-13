@@ -18,6 +18,7 @@ export interface Card {
 
 export interface CardDetail extends Card {
   content_markdown: string
+  column_title: string
 }
 
 export interface Column {

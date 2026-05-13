@@ -9,14 +9,14 @@ Backend is the single source of truth. Reference patterns from alpha7 at `/home/
 
 ---
 
-## Current Build Status
+## Build Status
 
 | Layer | Status |
 |-------|--------|
 | Backend models, serializers, services, API views | ✅ Complete |
 | Migrations applied, DB running | ✅ Complete |
-| Frontend UI (static/hardcoded mock data) | ✅ Complete |
-| API wiring (hooks, services/api.ts, real data) | ⏳ Next |
+| Frontend UI | ✅ Complete |
+| API wiring (hooks, services, real data) | ✅ Complete |
 
 ---
 
@@ -30,6 +30,7 @@ Backend is the single source of truth. Reference patterns from alpha7 at `/home/
 6. **Tailwind v4** — `@tailwindcss/vite` plugin, theme in `src/index.css` `@theme {}` block, NO `tailwind.config.js`
 7. **shadcn/ui** — do not import `@radix-ui` directly in feature code; all primitives via `src/components/ui/`
 8. **Top-down data flow** — only `BoardView`, `Sidebar`, and `EditorPanel` fetch data; all other components receive props
+9. **Zustand for UI state only** — `selectedCardId`, `editorPanelOpen`, `sidebarOpen`. All data comes from the API.
 
 ---
 
@@ -48,6 +49,9 @@ Backend is the single source of truth. Reference patterns from alpha7 at `/home/
 | @vitejs/plugin-react | ^6.0.0 |
 | Tailwind | v4 (via @tailwindcss/vite) |
 | tailwind-merge | ^3.0.0 |
+| @tanstack/react-query | v5 |
+| zustand | latest |
+| axios | latest |
 | @dnd-kit/sortable | ^10.0.0 |
 | shadcn/ui | latest (Tailwind v4 compatible) |
 | vite-plugin-pwa | ^0.21.0 |
@@ -56,15 +60,26 @@ Backend is the single source of truth. Reference patterns from alpha7 at `/home/
 
 ## Running Locally
 
+### Docker (Postgres)
 ```bash
-# Terminal 1 — Backend
-cd ~/coding/flux/docker && docker compose up -d     # postgres on :5434
-cd ~/coding/flux/backend
-uv run python manage.py migrate
-uv run python manage.py runserver 7000              # API on :7000
+cd ~/coding/flux/docker
+docker compose up -d        # postgres on :5434
+docker compose down         # stop
+```
 
-# Terminal 2 — Frontend
-cd ~/coding/flux/frontend && pnpm dev               # app on :3000
+### Backend
+```bash
+cd ~/coding/flux/backend
+uv run python manage.py runserver 7000          # API on :7000
+uv run python manage.py makemigrations          # only when models change
+uv run python manage.py migrate                 # only when models change
+```
+
+### Frontend
+```bash
+cd ~/coding/flux/frontend
+pnpm dev                    # app on :3000
+pnpm build                  # production build
 ```
 
 API docs: http://localhost:7000/api/docs/
@@ -116,7 +131,7 @@ GET                /api/v1/search/?q=<query>
 - `BoardDetailSerializer` — above + nested columns (with nested cards)
 - `ColumnSerializer` — id, board_id, title, position, card_count + nested cards (read-only)
 - `CardSerializer` — id, column_id, title, content_preview, position, created_at, updated_at
-- `CardDetailSerializer` — above + content_markdown
+- `CardDetailSerializer` — above + content_markdown, column_title
 - `CardMoveSerializer` — source_column_id, destination_column_id, destination_index (int ≥ 0)
 
 ---
@@ -147,50 +162,86 @@ Only 3 data-fetching points: Sidebar, BoardView, EditorPanel.
 
 ---
 
+## 3-Layer API Pattern
+
+```
+Layer 1 — src/services/api.ts          axios instance, baseURL: '/api/v1/'
+Layer 2 — src/services/boardsApi.ts    thin one-liner functions, returns r.data
+          src/services/cardsApi.ts
+Layer 3 — src/hooks/queries/useBoards.ts   React Query hooks + key factories
+          src/hooks/queries/useCards.ts
+```
+
+- Layer 2 functions: no state, no error handling, just `api.method(...).then(r => r.data)`
+- Layer 3 mutations call `qc.invalidateQueries` on success
+- Components call hooks directly — no business logic in hooks
+
+### Cache Invalidation Rules
+
+| Action | Invalidates |
+|--------|------------|
+| createBoard / deleteBoard | boardKeys.all |
+| createColumn / updateColumn / deleteColumn | boardKeys.detail(boardId) |
+| createCard / deleteCard / moveCard | boardKeys.detail(boardId) |
+| updateCard | cardKeys.detail(cardId) |
+
+---
+
 ## Frontend Folder Structure
 
 ```
 frontend/src/
 ├── app/
-│   ├── App.tsx              ← RouterProvider
-│   └── providers.tsx        ← QueryClientProvider + TooltipProvider
+│   ├── App.tsx                  ← RouterProvider
+│   └── providers.tsx            ← QueryClientProvider + TooltipProvider
 ├── features/
 │   ├── board/
-│   │   ├── BoardView.tsx        ← DATA OWNER (parent, fetches data, passes props down)
-│   │   ├── BoardList.tsx        ← DATA OWNER (parent for /boards route)
+│   │   ├── BoardView.tsx        ← DATA OWNER: fetches board detail, passes props down
+│   │   ├── BoardList.tsx        ← DATA OWNER: fetches board list
 │   │   └── components/
 │   │       └── CreateBoardDialog.tsx
 │   ├── column/
-│   │   ├── Column.tsx           ← PRESENTATIONAL parent for a single column
+│   │   ├── Column.tsx           ← PRESENTATIONAL: renders one column + its cards
 │   │   └── components/
 │   │       └── AddColumnButton.tsx
 │   ├── card/
-│   │   ├── CardList.tsx         ← PRESENTATIONAL parent, maps cards → Card
+│   │   ├── CardList.tsx         ← PRESENTATIONAL: maps cards → Card
 │   │   └── components/
-│   │       └── Card.tsx         ← PRESENTATIONAL leaf
+│   │       └── Card.tsx         ← PRESENTATIONAL leaf, opens EditorPanel on click
 │   └── editor/
-│       ├── EditorPanel.tsx      ← DATA OWNER (always mounted)
+│       ├── EditorPanel.tsx      ← DATA OWNER: always mounted, fetches + auto-saves card
 │       └── components/
 │           ├── MarkdownEditor.tsx
 │           └── MarkdownPreview.tsx
 ├── components/
-│   ├── ui/                  ← shadcn components only
+│   ├── ui/                      ← shadcn primitives only
 │   └── layout/
 │       ├── AppLayout.tsx
-│       ├── Sidebar.tsx
+│       ├── Sidebar.tsx          ← DATA OWNER: fetches board list
 │       └── Toolbar.tsx
-├── services/api.ts          ← axios instance + typed helpers (next to implement)
-├── store/ui.ts              ← Zustand: selectedCardId, editorPanelOpen, sidebarOpen
+├── services/
+│   ├── api.ts                   ← axios instance (Layer 1)
+│   ├── boardsApi.ts             ← boards + columns functions (Layer 2)
+│   └── cardsApi.ts              ← cards functions (Layer 2)
 ├── hooks/
-│   ├── useBoards.ts         ← ['boards']
-│   ├── useBoard.ts          ← ['boards', id, 'detail']
-│   ├── useCard.ts           ← ['cards', id]
-│   └── useDebounce.ts
-├── routes/index.tsx
-├── lib/utils.ts             ← cn() helper
-├── types/index.ts           ← Board, Column, Card, CardDetail, BoardDetail
+│   ├── useDebounce.ts           ← generic debounce hook
+│   └── queries/
+│       ├── useBoards.ts         ← boardKeys + board/column hooks (Layer 3)
+│       └── useCards.ts          ← cardKeys + card hooks (Layer 3)
+├── store/
+│   └── ui.ts                    ← Zustand: selectedCardId, editorPanelOpen, sidebarOpen
+├── utils/
+│   ├── cn.ts                    ← clsx + twMerge
+│   ├── formatDate.ts            ← ISO → "May 8", returns '—' for null
+│   └── relativeTime.ts          ← ISO → "2 min ago", returns '—' for null
+├── lib/
+│   └── utils.ts                 ← re-exports cn from utils/cn (shadcn compat, do not change)
+├── types/
+│   └── index.ts                 ← Board, Column, Card, CardDetail, BoardDetail
+├── routes/
+│   └── index.tsx
 ├── main.tsx
-└── index.css                ← @theme tokens (NO tailwind.config.js)
+└── index.css                    ← @theme tokens (NO tailwind.config.js)
 ```
 
 ### Component Rules
@@ -221,10 +272,12 @@ interface UIState {
 
 ## Frontend — Key Notes
 
-- **shadcn `components.json`** — aliases use `src/` prefix (not `@/`) due to Vite alias resolution. Do not change back to `@/`.
-- **shadcn component imports** use `@/lib/utils` and `@/components/ui/` — these resolve correctly via `tsconfig.app.json` paths.
+- **shadcn `components.json`** — aliases use `src/` prefix (not `@/`). Do not change back to `@/`.
+- **shadcn component imports** use `@/lib/utils` and `@/components/ui/` — resolve via `tsconfig.app.json`. Do not edit these imports.
+- **`src/lib/utils.ts`** is a re-export shim for shadcn compatibility — do not add logic here.
 - **Tailwind v4** — no `tailwind.config.js`, all tokens in `src/index.css` `@theme {}` block.
-- **Mock data** lives in `BoardView.tsx` — will be replaced with real API data during wiring phase.
+- **EditorPanel auto-save** — debounced 800ms on title and content, sends `content_preview` (first 200 chars) alongside `content_markdown`.
+- **Vite proxy** — `/api` → `http://localhost:7000` (set in `vite.config.ts`).
 
 ---
 
