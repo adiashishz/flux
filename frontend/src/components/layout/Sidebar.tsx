@@ -1,4 +1,4 @@
-import { LayoutDashboard, Trello, ChevronDown, Hash, Search, ChevronRight } from "lucide-react"
+import { Kanban, ChevronDown, Hash, Search, ChevronRight, ChevronsLeft } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { useUIStore } from "@/store/ui"
@@ -8,27 +8,34 @@ const MOCK_TAGS = ["marketing", "launch", "analysis", "research", "workflows"]
 
 export function Sidebar() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen)
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const [workspacesOpen, setWorkspacesOpen] = useState(true)
 
   return (
     <aside
       className={cn(
-        "flex flex-col h-screen bg-[#1E293B] text-slate-300 shrink-0 transition-all duration-300 overflow-hidden",
+        "flex flex-col h-screen bg-[#0F172A] text-slate-300 shrink-0 transition-all duration-300 overflow-hidden",
         sidebarOpen ? "w-64" : "w-0"
       )}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-700">
+      <div className="flex items-center gap-3 px-5 py-5">
         <div className="w-8 h-8 rounded-lg bg-teal-500 flex items-center justify-center shrink-0">
           <span className="text-white font-bold text-sm">F</span>
         </div>
         <span className="text-white font-semibold text-base tracking-tight">Flux</span>
+        <button
+          onClick={toggleSidebar}
+          className="ml-auto p-1 rounded-md text-slate-500 hover:text-slate-300 hover:bg-slate-700/50 transition-colors"
+          title="Collapse sidebar"
+        >
+          <ChevronsLeft size={16} />
+        </button>
       </div>
 
       {/* Nav */}
-      <nav className="flex flex-col gap-1 px-3 py-4">
-        <NavItem icon={<LayoutDashboard size={16} />} label="Dashboard" />
-        <NavItem icon={<Trello size={16} />} label="My Boards" active />
+      <nav className="flex flex-col gap-1 px-3 py-2">
+        <NavItem icon={<Kanban size={16} />} label="My Boards" active />
       </nav>
 
       {/* Workspaces */}

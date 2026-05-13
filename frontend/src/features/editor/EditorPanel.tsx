@@ -32,8 +32,8 @@ export function EditorPanel() {
   return (
     <aside
       className={cn(
-        "w-[450px] h-screen bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col shrink-0 transition-transform duration-300",
-        open ? "translate-x-0" : "translate-x-full"
+        "h-screen bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col shrink-0 transition-all duration-300 overflow-hidden",
+        open ? "w-[450px]" : "w-0"
       )}
     >
       {/* Top bar */}
