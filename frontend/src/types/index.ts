@@ -1,6 +1,19 @@
+export interface Workspace {
+  id: string
+  title: string
+  created_at: string
+  updated_at: string
+  board_count: number
+}
+
+export interface WorkspaceDetail extends Workspace {
+  boards: Board[]
+}
+
 export interface Board {
   id: string
   title: string
+  workspace_id: string | null
   created_at: string
   updated_at: string
   column_count: number

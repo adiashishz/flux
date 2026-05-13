@@ -5,11 +5,12 @@ from .column_serializers import ColumnSerializer
 
 class BoardSerializer(serializers.ModelSerializer):
     column_count = serializers.IntegerField(source="columns.count", read_only=True)
+    workspace_id = serializers.UUIDField(source="workspace.id", read_only=True, allow_null=True)
 
     class Meta:
         model = Board
-        fields = ["id", "title", "created_at", "updated_at", "column_count"]
-        read_only_fields = ["id", "created_at", "updated_at", "column_count"]
+        fields = ["id", "title", "workspace_id", "created_at", "updated_at", "column_count"]
+        read_only_fields = ["id", "workspace_id", "created_at", "updated_at", "column_count"]
 
 
 class BoardDetailSerializer(serializers.ModelSerializer):

@@ -4,6 +4,13 @@ from apps.core.models import BaseModel
 
 class Board(BaseModel):
     title = models.CharField(max_length=255)
+    workspace = models.ForeignKey(
+        "workspace.Workspace",
+        on_delete=models.CASCADE,
+        related_name="boards",
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         ordering = ["-created_at"]

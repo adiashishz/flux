@@ -1,9 +1,13 @@
 from django.urls import path
+from .workspaces import WorkspaceListView, WorkspaceDetailView, WorkspaceBoardCreateView
 from .boards import BoardListView, BoardDetailView, BoardNestedDetailView
 from .columns import BoardColumnCreateView, ColumnDetailView
 from .cards import ColumnCardCreateView, CardDetailView, CardMoveView, SearchView
 
 urlpatterns = [
+    path("workspaces/", WorkspaceListView.as_view(), name="workspace-list"),
+    path("workspaces/<uuid:pk>/", WorkspaceDetailView.as_view(), name="workspace-detail"),
+    path("workspaces/<uuid:pk>/boards/", WorkspaceBoardCreateView.as_view(), name="workspace-board-create"),
     path("boards/", BoardListView.as_view(), name="board-list"),
     path("boards/<uuid:pk>/", BoardDetailView.as_view(), name="board-detail"),
     path("boards/<uuid:pk>/detail/", BoardNestedDetailView.as_view(), name="board-nested-detail"),

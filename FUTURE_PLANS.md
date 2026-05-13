@@ -1,0 +1,73 @@
+# Flux — Future Plans
+
+This file tracks features and ideas planned for future development. Nothing here is being built yet.
+
+---
+
+## Projects (Sidebar Section)
+
+Add a third top-level section to the sidebar alongside **My Boards** and **Workspaces**.
+
+**Concept:**
+- Sidebar gets a new "Projects" section
+- Each project is a focused unit of work — think a product launch, a client engagement, a research initiative
+- A project contains boards, and each board contains columns + cards (same hierarchy as workspaces)
+- Clicking a project in the sidebar opens that project's board list
+- Clicking a board opens columns/cards as usual
+
+**How it differs from Workspaces:**
+- Workspaces are broad organizational folders (e.g. "School", "Work", "Personal")
+- Projects are specific, time-bounded efforts (e.g. "Website Redesign Q3", "Client Onboarding — Acme")
+- Projects may eventually have additional metadata: status (active/archived), due date, owner, description
+
+**Model:**
+```
+Project
+  id (UUID)
+  title
+  status  (active | archived)  ← future field
+  created_at, updated_at
+
+Board  →  workspace FK (nullable)
+       →  project FK (nullable)   ← new FK, same pattern as workspace
+```
+
+**Routes (future):**
+```
+/projects                          → ProjectList
+/projects/:projectId               → BoardList (scoped to project)
+/projects/:projectId/boards/:id    → BoardView
+```
+
+**Sidebar layout (future):**
+```
+  My Boards
+──────────────────────────────
+WORKSPACES          [+]
+  • School
+  • Work
+──────────────────────────────
+PROJECTS            [+]
+  • Website Redesign Q3
+  • Client Onboarding — Acme
+──────────────────────────────
+  Quick search…
+```
+
+**Implementation notes (when the time comes):**
+- Follow the exact same pattern as Workspace: new model, nullable FK on Board, serializers, APIView endpoints, 3-layer frontend
+- `BoardList` will need a third mode alongside personal and workspace
+- `CreateBoardDialog` gets a `projectId` prop path
+- Board can belong to a workspace OR a project OR neither (My Boards) — mutually exclusive
+
+---
+
+## Other Ideas (Parking Lot)
+
+- **Card due dates** — add `due_date` field to Card, show in card UI
+- **Renameable app** — app name ("Flux") is hardcoded in `Sidebar.tsx` and `index.html`. When needed, centralise it in `src/config.ts` (`APP_NAME`, `APP_INITIAL`) and update those two files. One-line change after that.
+- **Card labels/tags** — lightweight tagging system for cards
+- **Drag-and-drop** — reorder cards within a column and move across columns (`@dnd-kit/sortable` already installed)
+- **Search** — wire the existing `GET /api/v1/search/?q=` endpoint to the Quick Search bar
+- **Board templates** — create a board with predefined columns (e.g. "To Do / In Progress / Done")
+- **Archive** — soft-delete boards/cards instead of hard delete
