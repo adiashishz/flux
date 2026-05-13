@@ -7,6 +7,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { useCreateBoard } from "@/hooks/queries/useBoards"
 
 interface CreateBoardDialogProps {
   open: boolean
@@ -15,11 +16,16 @@ interface CreateBoardDialogProps {
 
 export function CreateBoardDialog({ open, onClose }: CreateBoardDialogProps) {
   const [title, setTitle] = useState("")
+  const { mutate: createBoard, isPending } = useCreateBoard()
 
   function handleCreate() {
     if (!title.trim()) return
-    setTitle("")
-    onClose()
+    createBoard(title.trim(), {
+      onSuccess: () => {
+        setTitle("")
+        onClose()
+      },
+    })
   }
 
   return (
@@ -44,9 +50,10 @@ export function CreateBoardDialog({ open, onClose }: CreateBoardDialogProps) {
           </button>
           <button
             onClick={handleCreate}
-            className="px-4 py-2 rounded-md text-sm bg-[#0D9488] text-white font-medium hover:bg-[#0F766E] transition-colors"
+            disabled={isPending || !title.trim()}
+            className="px-4 py-2 rounded-md text-sm bg-[#0D9488] text-white font-medium hover:bg-[#0F766E] disabled:opacity-50 transition-colors"
           >
-            Create
+            {isPending ? "Creating…" : "Create"}
           </button>
         </DialogFooter>
       </DialogContent>

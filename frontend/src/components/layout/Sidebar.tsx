@@ -1,15 +1,16 @@
-import { Kanban, ChevronDown, Hash, Search, ChevronRight, ChevronsLeft } from "lucide-react"
+import { Kanban, ChevronDown, Search, ChevronRight, ChevronsLeft } from "lucide-react"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { useUIStore } from "@/store/ui"
-
-const MOCK_BOARDS = ["Content Marketing Pipeline", "Feature Roadmap Q4", "Design System"]
-const MOCK_TAGS = ["marketing", "launch", "analysis", "research", "workflows"]
+import { useBoards } from "@/hooks/queries/useBoards"
 
 export function Sidebar() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const [workspacesOpen, setWorkspacesOpen] = useState(true)
+  const navigate = useNavigate()
+  const { data: boards } = useBoards()
 
   return (
     <aside
@@ -50,33 +51,18 @@ export function Sidebar() {
 
         {workspacesOpen && (
           <div className="flex flex-col gap-0.5">
-            {MOCK_BOARDS.map((name) => (
+            {(boards ?? []).map((board) => (
               <button
-                key={name}
+                key={board.id}
+                onClick={() => navigate(`/boards/${board.id}`)}
                 className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm text-slate-400 hover:bg-[#334155] hover:text-white transition-colors text-left"
               >
                 <div className="w-2 h-2 rounded-sm bg-teal-500 shrink-0" />
-                <span className="truncate">{name}</span>
+                <span className="truncate">{board.title}</span>
               </button>
             ))}
           </div>
         )}
-
-        {/* Tags */}
-        <div className="mt-5">
-          <p className="px-2 mb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tags</p>
-          <div className="flex flex-col gap-0.5">
-            {MOCK_TAGS.map((tag) => (
-              <button
-                key={tag}
-                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm text-slate-400 hover:bg-[#334155] hover:text-white transition-colors text-left"
-              >
-                <Hash size={13} className="shrink-0 text-slate-500" />
-                <span>{tag}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Quick Search */}
