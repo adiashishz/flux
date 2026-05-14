@@ -186,7 +186,7 @@ export function EditorPanel() {
               placeholder="Add a short description…"
             />
 
-            <TipTapEditor key={card.id} value={content} onChange={setContent} />
+            <TipTapEditor key={card.id} value={card.content_markdown} onChange={setContent} />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-sm text-[#94A3B8]">
