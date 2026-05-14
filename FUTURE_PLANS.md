@@ -160,6 +160,40 @@ The header was removed to keep the UI minimal — the sidebar handles all naviga
 
 ---
 
+## Editor Enhancements
+
+Extend the TipTap editor in `EditorPanel` with richer content types. The current stack (`StarterKit`, `Underline`, `TaskList`, `TaskItem`, `tiptap-markdown`) is the base — all additions follow the same extension pattern.
+
+**Low effort — drop-in TipTap extensions:**
+
+| Feature | Package | Notes |
+|---|---|---|
+| Syntax-highlighted code blocks | `@tiptap/extension-code-block-lowlight` + `lowlight` | Replaces plain `code` block with language-aware highlighting |
+| Tables | `@tiptap/extension-table` | Render and edit markdown tables in-editor |
+| Text color / highlight | `@tiptap/extension-color` + `@tiptap/extension-highlight` | Colour-coded text, like a highlighter pen |
+| Horizontal rule | already in StarterKit | Just needs a toolbar button wired up |
+
+**Medium effort:**
+
+- **Image support** — `@tiptap/extension-image`. Paste or drag an image URL, renders inline. For file uploads, a backend endpoint stores the file and returns a URL that the extension inserts.
+- **Slash commands** — typing `/` opens an inline command palette (heading, list, table, image, etc.). Very Notion-like UX. There are community TipTap extensions for this; alternatively hand-roll a `ReactRenderer` suggestion plugin.
+- **Collapsible sections** — a custom TipTap node; fold a heading and its content body. Useful for long cards.
+
+**Higher effort — custom nodes:**
+
+- **Drawing / freehand canvas** — embed [Excalidraw](https://excalidraw.com) as a React component mounted inside a custom TipTap node. The drawing serialises to SVG, stored as part of the card content. Good for diagrams and wireframes.
+- **Embed blocks** — paste a URL (YouTube, GitHub, tweet) and get a rich preview card rendered as a TipTap node. Requires a backend `/api/v1/unfurl/?url=` endpoint that fetches Open Graph metadata.
+- **File attachments** — not an editor node but surfaced in `EditorPanel` below the editor. Upload PDFs or files via a backend endpoint, listed as download links on the card.
+
+**Implementation notes (when the time comes):**
+- Add extensions one at a time — each is its own PR
+- Toolbar in `TipTapEditor.tsx` grows a button per new extension; keep it icon-only with tooltips to avoid clutter
+- `tiptap-markdown` handles serialisation — verify each new node round-trips correctly to markdown before shipping
+- Excalidraw embed: store SVG in a new `card_drawings` JSON field or as a separate model; do not bloat `content_markdown`
+- Image upload endpoint: `POST /api/v1/uploads/` → returns `{ url }` — store files in `/media/`, served via Django in dev and a CDN/object store in prod
+
+---
+
 ## Remove shadcn/ui — Build Own Component Library
 
 Replace all shadcn/ui primitives with hand-rolled components that match Flux's exact design language. The goal is full ownership — no third-party base UI opinions, no `@base-ui/react` dependency, no `src/lib/utils.ts` shim.
@@ -301,3 +335,9 @@ All planned features at a glance:
 | **Auth & Sync** | JWT login/register, user-scoped data, hosted backend — access your boards from any device |
 | **Own component library** | Replace all shadcn/ui primitives with hand-rolled Tailwind v4 components; remove all Radix/base-ui dependencies |
 | **Export (JSON & Markdown)** | Download boards or individual cards as JSON (structured backup) or Markdown (human-readable) |
+| **Editor — syntax highlighting** | Code blocks with language-aware highlighting via `@tiptap/extension-code-block-lowlight` |
+| **Editor — tables** | Render and edit markdown tables in-editor via `@tiptap/extension-table` |
+| **Editor — slash commands** | `/` command palette for inserting blocks (Notion-style) |
+| **Editor — image support** | Inline images via URL paste or file upload to backend `/api/v1/uploads/` |
+| **Editor — drawing** | Excalidraw canvas embedded as a TipTap node; serialises to SVG stored on the card |
+| **Editor — embeds** | Paste a URL → rich preview card (YouTube, GitHub, tweet) via backend unfurl endpoint |
