@@ -13,6 +13,7 @@ export interface WorkspaceDetail extends Workspace {
 export interface Board {
   id: string
   title: string
+  description?: string
   workspace_id: string | null
   created_at: string
   updated_at: string
@@ -23,6 +24,7 @@ export interface Card {
   id: string
   column_id: string
   title: string
+  description?: string
   content_preview: string
   position: number
   created_at: string

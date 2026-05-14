@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import * as cardsApi from "@/services/cardsApi"
 import { boardKeys } from "./useBoards"
-import type { CardDetail } from "@/types"
+import type { CardDetail, BoardDetail } from "@/types"
 
 export const cardKeys = {
   detail: (id: string) => ["cards", id] as const,
@@ -24,12 +24,28 @@ export function useCreateCard(boardId: string) {
   })
 }
 
-export function useUpdateCard() {
+export function useUpdateCard(boardId?: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Pick<CardDetail, "title" | "content_markdown" | "content_preview">> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<Pick<CardDetail, "title" | "description" | "content_markdown" | "content_preview">> }) =>
       cardsApi.updateCard(id, data),
-    onSuccess: (_, { id }) => qc.invalidateQueries({ queryKey: cardKeys.detail(id) }),
+    onSuccess: (updatedCard, { id }) => {
+      qc.setQueryData(cardKeys.detail(id), updatedCard)
+      if (boardId) {
+        qc.setQueryData<BoardDetail>(boardKeys.detail(boardId), (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            columns: old.columns.map(col => ({
+              ...col,
+              cards: col.cards.map(c =>
+                c.id === id ? { ...c, ...updatedCard } : c
+              ),
+            })),
+          }
+        })
+      }
+    },
   })
 }
 

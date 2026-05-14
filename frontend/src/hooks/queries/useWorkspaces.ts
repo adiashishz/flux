@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import * as workspacesApi from "@/services/workspacesApi"
-import { boardKeys } from "./useBoards"
 
 export const workspaceKeys = {
   all: ["workspaces"] as const,
@@ -32,9 +31,8 @@ export function useUpdateWorkspace() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: { title?: string } }) =>
       workspacesApi.updateWorkspace(id, data),
-    onSuccess: (_, { id }) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: workspaceKeys.all })
-      qc.invalidateQueries({ queryKey: workspaceKeys.detail(id) })
     },
   })
 }
@@ -43,14 +41,17 @@ export function useDeleteWorkspace() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => workspacesApi.deleteWorkspace(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: workspaceKeys.all }),
+    onSuccess: (_, id) => {
+      qc.removeQueries({ queryKey: workspaceKeys.detail(id) })
+      qc.invalidateQueries({ queryKey: workspaceKeys.all, exact: true })
+    },
   })
 }
 
 export function useCreateBoard(workspaceId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (title: string) => workspacesApi.createBoard(workspaceId, title),
+    mutationFn: (data: { title: string; description?: string }) => workspacesApi.createBoard(workspaceId, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: workspaceKeys.detail(workspaceId) }),
   })
 }

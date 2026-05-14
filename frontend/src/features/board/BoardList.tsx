@@ -1,13 +1,19 @@
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { Plus, LayoutGrid, SlidersHorizontal, Kanban, List, Calendar } from "lucide-react"
-import { Toolbar } from "@/components/layout/Toolbar"
+import { Plus, SlidersHorizontal, Kanban, List, Calendar, MoreVertical, Pencil, Trash2 } from "lucide-react"
 import { CreateBoardDialog } from "./components/CreateBoardDialog"
+import { EditBoardDialog } from "./components/EditBoardDialog"
 import { cn } from "@/utils/cn"
-import { useBoards } from "@/hooks/queries/useBoards"
+import { useBoards, useDeleteBoard } from "@/hooks/queries/useBoards"
 import { useWorkspace } from "@/hooks/queries/useWorkspaces"
 import relativeTime from "@/utils/relativeTime"
 import type { Board } from "@/types"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const VIEWS = [
   { label: "Kanban", icon: Kanban },
@@ -19,7 +25,9 @@ export function BoardList() {
   const navigate = useNavigate()
   const { workspaceId } = useParams<{ workspaceId?: string }>()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingBoard, setEditingBoard] = useState<Board | null>(null)
   const [activeView, setActiveView] = useState<string>("Kanban")
+  const { mutate: deleteBoard } = useDeleteBoard()
 
   const { data: personalBoards, isLoading: personalLoading } = useBoards()
   const { data: workspace, isLoading: workspaceLoading } = useWorkspace(workspaceId)
@@ -37,8 +45,8 @@ export function BoardList() {
 
   return (
     <div className="flex flex-col h-full bg-[#E2E8F0]">
-      <Toolbar title={title} />
       <div className="flex-1 overflow-y-auto p-8">
+        <h1 className="text-xl font-bold text-[#0F172A] mb-5">{title}</h1>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold text-[#0F172A]">All Boards</h2>
@@ -83,23 +91,46 @@ export function BoardList() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             {boards.map((board) => (
-              <button
+              <div
                 key={board.id}
+                className="relative flex flex-col items-start p-5 h-36 bg-white rounded-xl border border-[#E2E8F0] shadow-sm hover:shadow-md hover:border-[#0D9488]/30 transition-all cursor-pointer"
                 onClick={() => navigate(boardHref(board.id))}
-                className="flex flex-col items-start gap-3 p-5 bg-white rounded-xl border border-[#E2E8F0] shadow-sm hover:shadow-md hover:border-[#0D9488]/30 transition-all text-left"
               >
-                <div className="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center">
-                  <LayoutGrid size={20} className="text-[#0D9488]" />
+                <p className="font-semibold text-[#0F172A] text-sm pr-6">{board.title}</p>
+                <p className="flex-1 mt-2 text-xs text-[#94A3B8] line-clamp-2">
+                  {board.description || "No description"}
+                </p>
+                <p className="text-xs text-[#94A3B8] mt-auto pt-2">
+                  {board.column_count} columns · Updated {relativeTime(board.updated_at)}
+                </p>
+
+                {/* Three-dot menu */}
+                <div
+                  className="absolute top-3 right-3"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="p-1 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
+                      <MoreVertical size={14} />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditingBoard(board)}>
+                        <Pencil size={13} className="mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => deleteBoard(board.id)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 size={13} className="mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <div>
-                  <p className="font-semibold text-[#0F172A] text-sm mb-1">{board.title}</p>
-                  <p className="text-xs text-[#94A3B8]">
-                    {board.column_count} columns · Updated {relativeTime(board.updated_at)}
-                  </p>
-                </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
@@ -109,6 +140,10 @@ export function BoardList() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         workspaceId={workspaceId}
+      />
+      <EditBoardDialog
+        board={editingBoard}
+        onClose={() => setEditingBoard(null)}
       />
     </div>
   )

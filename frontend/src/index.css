@@ -51,3 +51,30 @@
     background: #CBD5E1;
   }
 }
+
+/* TipTap editor content styles */
+.tiptap-content > * + * { margin-top: 0.6em; }
+.tiptap-content strong { font-weight: 600; }
+.tiptap-content em { font-style: italic; }
+.tiptap-content u { text-decoration: underline; }
+.tiptap-content h1 { font-size: 1.4em; font-weight: 700; color: #0F172A; }
+.tiptap-content h2 { font-size: 1.2em; font-weight: 600; color: #0F172A; }
+.tiptap-content h3 { font-size: 1.05em; font-weight: 600; color: #0F172A; }
+.tiptap-content ul { padding-left: 1.4em; list-style-type: disc; }
+.tiptap-content ol { padding-left: 1.4em; list-style-type: decimal; }
+.tiptap-content li { margin-top: 0.2em; }
+.tiptap-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #CBD5E1;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+.tiptap-content ul[data-type="taskList"] { padding-left: 0; list-style: none; }
+.tiptap-content ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 0.5em; }
+.tiptap-content ul[data-type="taskList"] li > label { margin-top: 1px; }
+.tiptap-content ul[data-type="taskList"] li > label input[type="checkbox"] {
+  width: 14px; height: 14px; accent-color: #f97316; cursor: pointer;
+}
+.tiptap-content code { background: #F1F5F9; border-radius: 3px; padding: 0.1em 0.3em; font-size: 0.85em; }
+.tiptap-content blockquote { border-left: 3px solid #E2E8F0; padding-left: 0.8em; color: #64748B; }

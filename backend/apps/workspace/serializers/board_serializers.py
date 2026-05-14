@@ -9,7 +9,7 @@ class BoardSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Board
-        fields = ["id", "title", "workspace_id", "created_at", "updated_at", "column_count"]
+        fields = ["id", "title", "description", "workspace_id", "created_at", "updated_at", "column_count"]
         read_only_fields = ["id", "workspace_id", "created_at", "updated_at", "column_count"]
 
 
