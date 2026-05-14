@@ -15,6 +15,7 @@ export interface Board {
   title: string
   description?: string
   workspace_id: string | null
+  position: number
   created_at: string
   updated_at: string
   column_count: number

@@ -54,5 +54,7 @@ class WorkspaceBoardCreateView(APIView):
             raise Http404
         serializer = BoardSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(workspace=workspace)
+        last = Board.objects.filter(workspace=workspace).order_by("position").last()
+        next_position = (last.position + 1000) if last else 1000
+        serializer.save(workspace=workspace, position=next_position)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

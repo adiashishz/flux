@@ -1,11 +1,25 @@
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { Plus, SlidersHorizontal, Kanban, List, Calendar, MoreVertical, Pencil, Trash2 } from "lucide-react"
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import { SortableContext, useSortable, arrayMove, rectSortingStrategy } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { useQueryClient } from "@tanstack/react-query"
 import { CreateBoardDialog } from "./components/CreateBoardDialog"
 import { EditBoardDialog } from "./components/EditBoardDialog"
 import { cn } from "@/utils/cn"
-import { useBoards, useDeleteBoard } from "@/hooks/queries/useBoards"
+import { useBoards, useDeleteBoard, useMoveBoard, boardKeys } from "@/hooks/queries/useBoards"
 import { useWorkspace } from "@/hooks/queries/useWorkspaces"
+import { workspaceKeys } from "@/hooks/queries/useWorkspaces"
 import relativeTime from "@/utils/relativeTime"
 import type { Board } from "@/types"
 import {
@@ -21,13 +35,91 @@ const VIEWS = [
   { label: "Calendar", icon: Calendar },
 ] as const
 
-export function BoardList() {
+interface SortableBoardCardProps {
+  board: Board
+  href: string
+  onEdit: (board: Board) => void
+  onDelete: (id: string) => void
+  isDraggingOverlay?: boolean
+}
+
+function SortableBoardCard({ board, href, onEdit, onDelete, isDraggingOverlay }: SortableBoardCardProps) {
   const navigate = useNavigate()
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: board.id })
+  const style = { transform: CSS.Transform.toString(transform), transition }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={() => navigate(href)}
+      className={cn(
+        "relative flex flex-col items-start p-5 h-36 bg-white rounded-xl border border-[#E2E8F0] shadow-sm hover:shadow-md hover:border-[#0D9488]/30 transition-all cursor-pointer",
+        (isDragging || isDraggingOverlay) && "opacity-40"
+      )}
+    >
+      <p className="font-semibold text-[#0F172A] text-sm pr-6">{board.title}</p>
+      <p className="flex-1 mt-2 text-xs text-[#94A3B8] line-clamp-2">
+        {board.description || "No description"}
+      </p>
+      <p className="text-xs text-[#94A3B8] mt-auto pt-2">
+        {board.column_count} columns · Updated {relativeTime(board.updated_at)}
+      </p>
+
+      <div
+        className="absolute top-3 right-3"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <DropdownMenu>
+          <DropdownMenuTrigger className="p-1 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
+            <MoreVertical size={14} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEdit(board)}>
+              <Pencil size={13} className="mr-2" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onDelete(board.id)}
+              className="text-red-600 focus:text-red-600"
+            >
+              <Trash2 size={13} className="mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  )
+}
+
+function BoardCardOverlay({ board }: { board: Board }) {
+  return (
+    <div className="relative flex flex-col items-start p-5 h-36 bg-white rounded-xl border border-[#0D9488]/40 shadow-xl cursor-grabbing rotate-1 opacity-95 w-full">
+      <p className="font-semibold text-[#0F172A] text-sm pr-6">{board.title}</p>
+      <p className="flex-1 mt-2 text-xs text-[#94A3B8] line-clamp-2">
+        {board.description || "No description"}
+      </p>
+      <p className="text-xs text-[#94A3B8] mt-auto pt-2">
+        {board.column_count} columns · Updated {relativeTime(board.updated_at)}
+      </p>
+    </div>
+  )
+}
+
+export function BoardList() {
   const { workspaceId } = useParams<{ workspaceId?: string }>()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingBoard, setEditingBoard] = useState<Board | null>(null)
   const [activeView, setActiveView] = useState<string>("Kanban")
+  const [activeBoard, setActiveBoard] = useState<Board | null>(null)
+
   const { mutate: deleteBoard } = useDeleteBoard()
+  const { mutate: moveBoard } = useMoveBoard(workspaceId)
+  const qc = useQueryClient()
 
   const { data: personalBoards, isLoading: personalLoading } = useBoards()
   const { data: workspace, isLoading: workspaceLoading } = useWorkspace(workspaceId)
@@ -37,10 +129,47 @@ export function BoardList() {
   const isLoading = isWorkspaceMode ? workspaceLoading : personalLoading
   const title = isWorkspaceMode ? (workspace?.title ?? "Loading…") : "My Boards"
 
+  const queryKey = isWorkspaceMode ? workspaceKeys.detail(workspaceId!) : boardKeys.all
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
   function boardHref(boardId: string) {
     return isWorkspaceMode
       ? `/workspaces/${workspaceId}/boards/${boardId}`
       : `/boards/${boardId}`
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    const dragged = boards.find(b => b.id === event.active.id)
+    if (dragged) setActiveBoard(dragged)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    setActiveBoard(null)
+
+    if (!over || active.id === over.id) return
+
+    const oldIndex = boards.findIndex(b => b.id === active.id)
+    const newIndex = boards.findIndex(b => b.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const reordered = arrayMove([...boards], oldIndex, newIndex)
+    const snapshot = qc.getQueryData(queryKey)
+
+    if (isWorkspaceMode) {
+      qc.setQueryData(workspaceKeys.detail(workspaceId!), (old: typeof workspace) => {
+        if (!old) return old
+        return { ...old, boards: reordered }
+      })
+    } else {
+      qc.setQueryData(boardKeys.all, reordered)
+    }
+
+    moveBoard(
+      { id: active.id as string, payload: { destination_index: newIndex } },
+      { onError: () => qc.setQueryData(queryKey, snapshot) }
+    )
   }
 
   return (
@@ -91,48 +220,31 @@ export function BoardList() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-4 gap-4">
-            {boards.map((board) => (
-              <div
-                key={board.id}
-                className="relative flex flex-col items-start p-5 h-36 bg-white rounded-xl border border-[#E2E8F0] shadow-sm hover:shadow-md hover:border-[#0D9488]/30 transition-all cursor-pointer"
-                onClick={() => navigate(boardHref(board.id))}
-              >
-                <p className="font-semibold text-[#0F172A] text-sm pr-6">{board.title}</p>
-                <p className="flex-1 mt-2 text-xs text-[#94A3B8] line-clamp-2">
-                  {board.description || "No description"}
-                </p>
-                <p className="text-xs text-[#94A3B8] mt-auto pt-2">
-                  {board.column_count} columns · Updated {relativeTime(board.updated_at)}
-                </p>
-
-                {/* Three-dot menu */}
-                <div
-                  className="absolute top-3 right-3"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="p-1 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
-                      <MoreVertical size={14} />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setEditingBoard(board)}>
-                        <Pencil size={13} className="mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => deleteBoard(board.id)}
-                        className="text-red-600 focus:text-red-600"
-                      >
-                        <Trash2 size={13} className="mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={boards.map(b => b.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-4 gap-4">
+                {boards.map((board) => (
+                  <SortableBoardCard
+                    key={board.id}
+                    board={board}
+                    href={boardHref(board.id)}
+                    onEdit={setEditingBoard}
+                    onDelete={deleteBoard}
+                    isDraggingOverlay={board.id === activeBoard?.id}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+
+            <DragOverlay dropAnimation={null}>
+              {activeBoard && <BoardCardOverlay board={activeBoard} />}
+            </DragOverlay>
+          </DndContext>
         )}
       </div>
 

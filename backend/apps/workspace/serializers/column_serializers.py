@@ -3,6 +3,11 @@ from apps.workspace.models import Column
 from .card_serializers import CardSerializer
 
 
+class ColumnMoveSerializer(serializers.Serializer):
+    board_id = serializers.UUIDField()
+    destination_index = serializers.IntegerField(min_value=0)
+
+
 class ColumnSerializer(serializers.ModelSerializer):
     board_id = serializers.UUIDField(source="board.id", read_only=True)
     card_count = serializers.IntegerField(source="cards.count", read_only=True)

@@ -13,8 +13,10 @@ class Board(BaseModel):
         blank=True,
     )
 
+    position = models.IntegerField(default=1000)
+
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["position"]
 
     def __str__(self):
         return self.title

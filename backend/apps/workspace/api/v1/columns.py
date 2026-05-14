@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from apps.workspace.models import Board, Column
-from apps.workspace.serializers.column_serializers import ColumnSerializer
+from apps.workspace.serializers.column_serializers import ColumnSerializer, ColumnMoveSerializer
+from apps.workspace.services.column_service import ColumnService
 
 
 class BoardColumnCreateView(APIView):
@@ -41,3 +42,21 @@ class ColumnDetailView(APIView):
         column = self._get_column(pk)
         column.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ColumnMoveView(APIView):
+    def post(self, request, pk):
+        try:
+            column = Column.objects.get(id=pk)
+        except Column.DoesNotExist:
+            raise Http404
+
+        serializer = ColumnMoveSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        column = ColumnService.move_column(
+            column_id=pk,
+            board_id=serializer.validated_data["board_id"],
+            dest_index=serializer.validated_data["destination_index"],
+        )
+        return Response(ColumnSerializer(column).data)
