@@ -1,7 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Plus, FolderOpen, SlidersHorizontal } from "lucide-react"
-import { Toolbar } from "@/components/layout/Toolbar"
 import { CreateWorkspaceDialog } from "./components/CreateWorkspaceDialog"
 import { useWorkspaces } from "@/hooks/queries/useWorkspaces"
 import relativeTime from "@/utils/relativeTime"
@@ -13,8 +12,8 @@ export function WorkspaceList() {
 
   return (
     <div className="flex flex-col h-full bg-[#E2E8F0]">
-      <Toolbar title="Workspaces" />
       <div className="flex-1 overflow-y-auto p-8">
+        <h1 className="text-xl font-bold text-[#0F172A] mb-5">Workspaces</h1>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-[#0F172A]">All Workspaces</h2>
           <div className="flex items-center gap-2">

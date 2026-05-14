@@ -62,6 +62,31 @@ PROJECTS            [+]
 
 ---
 
+## App Header
+
+The header was removed to keep the UI minimal — the sidebar handles all navigation and the content area is uncluttered. When auth and collaboration are added, a top header bar will make sense.
+
+**Vision:**
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  [← breadcrumb: My Boards / Q3 Launch / BoardView]   [🔍]  [🔔]  [👤] │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Planned contents:**
+- **Breadcrumb** — workspace → board path (links back to each level)
+- **Global search** — wire to existing `GET /api/v1/search/?q=` endpoint
+- **Notifications bell** — activity on boards you follow
+- **User profile/avatar** — name, logout, settings
+
+**Implementation notes (when the time comes):**
+- Add a `<Header />` component in `src/components/layout/`
+- Mount it in `AppLayout` above `<main>` (no per-page imports)
+- Breadcrumb reads from route params + query cache — no extra API calls
+- Keep sidebar expand button in `AppLayout` (absolute-positioned, already there)
+
+---
+
 ## Other Ideas (Parking Lot)
 
 - **Card due dates** — add `due_date` field to Card, show in card UI
@@ -71,3 +96,21 @@ PROJECTS            [+]
 - **Search** — wire the existing `GET /api/v1/search/?q=` endpoint to the Quick Search bar
 - **Board templates** — create a board with predefined columns (e.g. "To Do / In Progress / Done")
 - **Archive** — soft-delete boards/cards instead of hard delete
+
+---
+
+## Feature Index
+
+All planned features at a glance:
+
+| Feature | Summary |
+|---------|---------|
+| **Projects** | Third sidebar section for time-bounded efforts, sits alongside Workspaces |
+| **App Header** | Breadcrumb + global search + notifications + user profile bar |
+| **Drag-and-drop** | Reorder and move cards across columns (`@dnd-kit/sortable` already installed) |
+| **Search** | Wire `GET /api/v1/search/?q=` to a Quick Search bar in the sidebar/header |
+| **Card due dates** | `due_date` field on Card model, displayed in card UI |
+| **Card labels/tags** | Lightweight colour-coded tagging system for cards |
+| **Board templates** | Create a board with predefined columns (e.g. "To Do / In Progress / Done") |
+| **Archive** | Soft-delete for boards and cards instead of hard delete |
+| **Renameable app** | Centralise app name in `src/config.ts` so a single change renames the whole app |

@@ -155,3 +155,9 @@ frontend/src/
 Design reference (read before any UI changes):
 - `context/mockup.png` — visual reference
 - `context/mockup.html` — layout/spacing reference. Do NOT copy HTML literally into React.
+
+---
+
+## Future Plans
+
+Planned features and ideas that are **not yet being built** live in `FUTURE_PLANS.md` at the project root. Read it before suggesting new features — the idea may already be scoped there. Add new ideas to that file rather than implementing them speculatively.

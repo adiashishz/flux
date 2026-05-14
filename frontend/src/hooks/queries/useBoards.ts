@@ -21,7 +21,16 @@ export function useBoard(id: string) {
 export function useCreatePersonalBoard() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (title: string) => boardsApi.createBoard(title),
+    mutationFn: (data: { title: string; description?: string }) => boardsApi.createBoard(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: boardKeys.all }),
+  })
+}
+
+export function useUpdateBoard() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { title?: string; description?: string } }) =>
+      boardsApi.updateBoard(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: boardKeys.all }),
   })
 }
@@ -47,7 +56,10 @@ export function useUpdateColumn(boardId: string) {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: { title?: string } }) =>
       boardsApi.updateColumn(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: boardKeys.detail(boardId) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: boardKeys.detail(boardId) })
+      qc.invalidateQueries({ queryKey: ["cards"] })
+    },
   })
 }
 

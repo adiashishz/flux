@@ -31,6 +31,11 @@ class CardDetailView(APIView):
         except Card.DoesNotExist:
             raise Http404
 
+    def get(self, request, pk):
+        card = self._get_card(pk)
+        serializer = CardDetailSerializer(card)
+        return Response(serializer.data)
+
     def patch(self, request, pk):
         card = self._get_card(pk)
         serializer = CardDetailSerializer(card, data=request.data, partial=True)

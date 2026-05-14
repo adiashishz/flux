@@ -4,10 +4,10 @@ import type { Board, BoardDetail } from "@/types"
 export const getBoards = () =>
   api.get<Board[]>("/boards/").then(r => r.data)
 
-export const createBoard = (title: string) =>
-  api.post<Board>("/boards/", { title }).then(r => r.data)
+export const createBoard = (data: { title: string; description?: string }) =>
+  api.post<Board>("/boards/", data).then(r => r.data)
 
-export const updateBoard = (id: string, data: Partial<Pick<Board, "title">>) =>
+export const updateBoard = (id: string, data: Partial<Pick<Board, "title" | "description">>) =>
   api.patch<Board>(`/boards/${id}/`, data).then(r => r.data)
 
 export const deleteBoard = (id: string) =>

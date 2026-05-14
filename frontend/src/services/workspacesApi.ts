@@ -16,5 +16,5 @@ export const deleteWorkspace = (id: string) =>
 export const getWorkspaceDetail = (id: string) =>
   api.get<WorkspaceDetail>(`/workspaces/${id}/`).then(r => r.data)
 
-export const createBoard = (workspaceId: string, title: string) =>
-  api.post<Board>(`/workspaces/${workspaceId}/boards/`, { title }).then(r => r.data)
+export const createBoard = (workspaceId: string, data: { title: string; description?: string }) =>
+  api.post<Board>(`/workspaces/${workspaceId}/boards/`, data).then(r => r.data)
