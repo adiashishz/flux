@@ -18,7 +18,7 @@ export function useBoard(id: string) {
   })
 }
 
-export function useCreateBoard() {
+export function useCreatePersonalBoard() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (title: string) => boardsApi.createBoard(title),

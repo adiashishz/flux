@@ -10,14 +10,14 @@ from apps.workspace.selectors.board_selectors import get_board_detail
 
 class BoardListView(APIView):
     def get(self, request):
-        boards = Board.objects.all()
+        boards = Board.objects.filter(workspace__isnull=True)
         serializer = BoardSerializer(boards, many=True)
         return Response(serializer.data)
 
     def post(self, request):
         serializer = BoardSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        serializer.save(workspace=None)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 

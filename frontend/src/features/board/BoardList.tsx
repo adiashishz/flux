@@ -1,11 +1,13 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { Plus, LayoutGrid, SlidersHorizontal, Kanban, List, Calendar } from "lucide-react"
 import { Toolbar } from "@/components/layout/Toolbar"
 import { CreateBoardDialog } from "./components/CreateBoardDialog"
 import { cn } from "@/utils/cn"
 import { useBoards } from "@/hooks/queries/useBoards"
+import { useWorkspace } from "@/hooks/queries/useWorkspaces"
 import relativeTime from "@/utils/relativeTime"
+import type { Board } from "@/types"
 
 const VIEWS = [
   { label: "Kanban", icon: Kanban },
@@ -15,13 +17,27 @@ const VIEWS = [
 
 export function BoardList() {
   const navigate = useNavigate()
+  const { workspaceId } = useParams<{ workspaceId?: string }>()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [activeView, setActiveView] = useState<string>("Kanban")
-  const { data: boards, isLoading } = useBoards()
+
+  const { data: personalBoards, isLoading: personalLoading } = useBoards()
+  const { data: workspace, isLoading: workspaceLoading } = useWorkspace(workspaceId)
+
+  const isWorkspaceMode = !!workspaceId
+  const boards: Board[] = isWorkspaceMode ? (workspace?.boards ?? []) : (personalBoards ?? [])
+  const isLoading = isWorkspaceMode ? workspaceLoading : personalLoading
+  const title = isWorkspaceMode ? (workspace?.title ?? "Loading…") : "My Boards"
+
+  function boardHref(boardId: string) {
+    return isWorkspaceMode
+      ? `/workspaces/${workspaceId}/boards/${boardId}`
+      : `/boards/${boardId}`
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#E2E8F0]">
-      <Toolbar title="My Boards" />
+      <Toolbar title={title} />
       <div className="flex-1 overflow-y-auto p-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
@@ -68,10 +84,10 @@ export function BoardList() {
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-4">
-            {(boards ?? []).map((board) => (
+            {boards.map((board) => (
               <button
                 key={board.id}
-                onClick={() => navigate(`/boards/${board.id}`)}
+                onClick={() => navigate(boardHref(board.id))}
                 className="flex flex-col items-start gap-3 p-5 bg-white rounded-xl border border-[#E2E8F0] shadow-sm hover:shadow-md hover:border-[#0D9488]/30 transition-all text-left"
               >
                 <div className="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center">
@@ -89,7 +105,11 @@ export function BoardList() {
         )}
       </div>
 
-      <CreateBoardDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
+      <CreateBoardDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        workspaceId={workspaceId}
+      />
     </div>
   )
 }

@@ -7,20 +7,25 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { useCreateBoard } from "@/hooks/queries/useBoards"
+import { useCreatePersonalBoard } from "@/hooks/queries/useBoards"
+import { useCreateBoard } from "@/hooks/queries/useWorkspaces"
 
 interface CreateBoardDialogProps {
   open: boolean
   onClose: () => void
+  workspaceId?: string
 }
 
-export function CreateBoardDialog({ open, onClose }: CreateBoardDialogProps) {
+export function CreateBoardDialog({ open, onClose, workspaceId }: CreateBoardDialogProps) {
   const [title, setTitle] = useState("")
-  const { mutate: createBoard, isPending } = useCreateBoard()
+  const { mutate: createPersonalBoard, isPending: personalPending } = useCreatePersonalBoard()
+  const { mutate: createWorkspaceBoard, isPending: workspacePending } = useCreateBoard(workspaceId ?? "")
+  const isPending = personalPending || workspacePending
 
   function handleCreate() {
     if (!title.trim()) return
-    createBoard(title.trim(), {
+    const mutate = workspaceId ? createWorkspaceBoard : createPersonalBoard
+    mutate(title.trim(), {
       onSuccess: () => {
         setTitle("")
         onClose()
