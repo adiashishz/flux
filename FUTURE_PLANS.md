@@ -4,6 +4,79 @@ This file tracks features and ideas planned for future development. Nothing here
 
 ---
 
+## Auth & Sync
+
+Add user accounts so boards are tied to an identity and accessible from any device. No real-time collaboration — just server-state-as-truth, one user per account.
+
+**Concept:**
+- Register / log in with email + password
+- JWT tokens — stored in `localStorage`, sent via `Authorization: Bearer` header on every request
+- All data (workspaces, boards, columns, cards) is scoped to the logged-in user
+- "Sync" is just React Query refetching from the hosted backend — no websockets or CRDTs needed
+
+**Backend changes:**
+
+_Settings_
+```python
+# Replace in base.py / development.py
+DEFAULT_AUTHENTICATION_CLASSES: ["rest_framework_simplejwt.authentication.JWTAuthentication"]
+DEFAULT_PERMISSION_CLASSES: ["rest_framework.permissions.IsAuthenticated"]
+```
+
+_New endpoints_
+```
+POST /api/v1/auth/register/    → create user, return tokens
+POST /api/v1/auth/login/       → return access + refresh tokens
+POST /api/v1/auth/refresh/     → rotate access token
+POST /api/v1/auth/logout/      → blacklist refresh token
+```
+
+_Model changes_
+```
+Workspace   →  add user FK (owner)
+Board       →  add user FK (owner)
+```
+Column and Card are already scoped transitively through Board → Workspace.
+
+_All APIView `get_queryset` calls filter by `request.user`_ — users never see each other's data.
+
+**Frontend changes:**
+- `/login` and `/register` routes — simple forms, no sidebar/layout
+- `authApi.ts` + `useAuth.ts` hook for token management
+- Axios interceptor in `api.ts` — attaches `Authorization` header, handles 401 → redirect to `/login`
+- Token stored in `localStorage`; on app load, check token validity before rendering `AppLayout`
+- Zustand `ui.ts` gets a `currentUser` slice (id, email) populated after login
+
+**Frontend auth flow:**
+```
+App loads
+  └── token in localStorage?
+        yes → validate (GET /api/v1/auth/me/) → render AppLayout
+        no  → redirect to /login
+```
+
+**"From anywhere" requirement — hosting:**
+Sync only works if the backend is reachable outside localhost. Recommended targets:
+- **Fly.io** — free tier, Postgres addon, Docker-native (easy fit for this stack)
+- **Railway** — zero-config Django + Postgres deploys
+- **Self-hosted VPS** — full control, nginx + gunicorn + managed Postgres
+
+**Implementation order (when the time comes):**
+1. Add `djangorestframework-simplejwt`, wire auth endpoints
+2. Add `user` FK to Workspace + Board, write migrations
+3. Scope all APIView queries to `request.user`
+4. Frontend: login/register pages + axios interceptor
+5. Deploy backend to Fly.io / Railway
+6. Point frontend `VITE_API_URL` at the hosted backend
+
+**What this is NOT (intentionally out of scope for v1):**
+- Multi-user collaboration on the same board
+- Real-time sync (websockets / CRDTs)
+- OAuth / social login (email + password only to start)
+- Email verification / password reset (add later)
+
+---
+
 ## Projects (Sidebar Section)
 
 Add a third top-level section to the sidebar alongside **My Boards** and **Workspaces**.
@@ -87,6 +160,34 @@ The header was removed to keep the UI minimal — the sidebar handles all naviga
 
 ---
 
+## Remove shadcn/ui — Build Own Component Library
+
+Replace all shadcn/ui primitives with hand-rolled components that match Flux's exact design language. The goal is full ownership — no third-party base UI opinions, no `@base-ui/react` dependency, no `src/lib/utils.ts` shim.
+
+**Components to replace (current shadcn usage):**
+- `Button` — used in dialogs and forms
+- `Dialog` — create board/workspace modals
+- `DropdownMenu` — column/card context menus
+- `Input`, `Textarea` — form fields
+- `ScrollArea` — editor and sidebar scrolling
+- `Separator` — sidebar dividers
+- `Tooltip` — toolbar hints in TipTapEditor
+
+**Approach:**
+- Build each component in `src/components/ui/` as a plain React + Tailwind v4 component — no Radix, no base-ui
+- Match the existing visual style exactly so no UI regressions
+- Remove `components.json`, `src/lib/utils.ts` shim, and all `@base-ui/react` / `@radix-ui` packages once migration is complete
+- Replace one component at a time, ship each as its own PR
+
+**Implementation order (when the time comes):**
+1. `Button`, `Input`, `Textarea` — stateless, trivial to replace
+2. `Separator`, `ScrollArea` — minimal behaviour
+3. `Tooltip` — needs positioning logic (use CSS or a tiny custom hook)
+4. `DropdownMenu` — needs focus trap + keyboard nav
+5. `Dialog` — needs portal, focus trap, escape handling
+
+---
+
 ## Other Ideas (Parking Lot)
 
 - **Card due dates** — add `due_date` field to Card, show in card UI
@@ -96,6 +197,40 @@ The header was removed to keep the UI minimal — the sidebar handles all naviga
 - **Search** — wire the existing `GET /api/v1/search/?q=` endpoint to the Quick Search bar
 - **Board templates** — create a board with predefined columns (e.g. "To Do / In Progress / Done")
 - **Archive** — soft-delete boards/cards instead of hard delete
+
+---
+
+## Desktop / Packaging
+
+Ship Flux as a native desktop app (or a one-command launcher) for Linux and Windows — no browser, no manual server setup.
+
+**Two approaches:**
+
+### Option A — Tauri desktop app (full native experience)
+Wrap the Vite/React frontend in a Tauri shell. Tauri spawns the Django backend as a sidecar process on a random local port and serves the frontend as static files. SQLite replaces Postgres (one-line settings change; Django supports it natively).
+
+```
+Tauri shell
+  └── spawns Django (PyInstaller bundle) on a random local port
+  └── serves Vite frontend as static files
+  └── SQLite file in user's app data dir
+       Linux:   ~/.local/share/flux/flux.db
+       Windows: %APPDATA%\flux\flux.db
+```
+
+**Effort:** significant — a few weeks for cross-platform packaging stability.
+**Payoff:** one-click install, offline use, no browser or Docker required.
+
+### Option B — Shell script launcher (low-effort, good-enough)
+A `flux.sh` / `flux.bat` that starts Docker (Postgres), the Django backend, and opens the browser automatically. No packaging, no bundling — just a convenient entry point.
+
+**Effort:** a day or two.
+**Payoff:** "one command to run" UX without touching the stack.
+
+**Implementation notes (when the time comes):**
+- Option A: migrate `DATABASES` setting to SQLite in a new `desktop.py` settings file; use PyInstaller for the Python bundle; Tauri `sidecar` config to manage the Django process lifecycle
+- Option A: CI matrix builds needed: `ubuntu-latest`, `windows-latest` (GitHub Actions)
+- Option B: script lives at repo root — `flux.sh` (bash) + `flux.bat` (Windows batch); checks for Docker and opens `http://localhost:3000` after health-check passes
 
 ---
 
@@ -114,3 +249,7 @@ All planned features at a glance:
 | **Board templates** | Create a board with predefined columns (e.g. "To Do / In Progress / Done") |
 | **Archive** | Soft-delete for boards and cards instead of hard delete |
 | **Renameable app** | Centralise app name in `src/config.ts` so a single change renames the whole app |
+| **Desktop app (Tauri)** | Native Linux/Windows app — Tauri shell + PyInstaller Django sidecar + SQLite |
+| **Launcher script** | `flux.sh` / `flux.bat` that starts Docker + backend and opens the browser in one command |
+| **Auth & Sync** | JWT login/register, user-scoped data, hosted backend — access your boards from any device |
+| **Own component library** | Replace all shadcn/ui primitives with hand-rolled Tailwind v4 components; remove all Radix/base-ui dependencies |
