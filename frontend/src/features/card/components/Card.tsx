@@ -1,3 +1,5 @@
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import { cn } from "@/lib/utils"
 import { useUIStore } from "@/store/ui"
 import relativeTime from "@/utils/relativeTime"
@@ -13,11 +15,17 @@ const TAG_COLORS: Record<string, string> = {
 
 interface CardProps {
   card: CardType & { tags?: string[]; avatar?: string; date?: string }
+  isBeingDragged?: boolean
 }
 
-export function Card({ card }: CardProps) {
+export function Card({ card, isBeingDragged }: CardProps) {
   const setSelectedCard = useUIStore((s) => s.setSelectedCard)
   const openEditor = useUIStore((s) => s.openEditor)
+
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: card.id, data: { type: "card" } })
+
+  const style = { transform: CSS.Transform.toString(transform), transition }
 
   function handleClick() {
     setSelectedCard(card.id)
@@ -26,8 +34,15 @@ export function Card({ card }: CardProps) {
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
       onClick={handleClick}
-      className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow"
+      className={cn(
+        "bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow",
+        (isDragging || isBeingDragged) && "opacity-40"
+      )}
     >
       <p className="font-semibold text-[#0F172A] text-sm mb-1 leading-snug">{card.title}</p>
       {card.description && (

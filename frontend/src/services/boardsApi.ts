@@ -24,3 +24,9 @@ export const updateColumn = (id: string, data: { title?: string; position?: numb
 
 export const deleteColumn = (id: string) =>
   api.delete(`/columns/${id}/`).then(r => r.data)
+
+export const moveColumn = (id: string, payload: { board_id: string; destination_index: number }) =>
+  api.post(`/columns/${id}/move/`, payload).then(r => r.data)
+
+export const moveBoard = (id: string, payload: { destination_index: number }) =>
+  api.post<Board>(`/boards/${id}/move/`, payload).then(r => r.data)

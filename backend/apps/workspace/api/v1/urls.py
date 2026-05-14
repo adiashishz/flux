@@ -1,7 +1,7 @@
 from django.urls import path
 from .workspaces import WorkspaceListView, WorkspaceDetailView, WorkspaceBoardCreateView
-from .boards import BoardListView, BoardDetailView, BoardNestedDetailView
-from .columns import BoardColumnCreateView, ColumnDetailView
+from .boards import BoardListView, BoardDetailView, BoardNestedDetailView, BoardMoveView
+from .columns import BoardColumnCreateView, ColumnDetailView, ColumnMoveView
 from .cards import ColumnCardCreateView, CardDetailView, CardMoveView, SearchView
 
 urlpatterns = [
@@ -11,8 +11,10 @@ urlpatterns = [
     path("boards/", BoardListView.as_view(), name="board-list"),
     path("boards/<uuid:pk>/", BoardDetailView.as_view(), name="board-detail"),
     path("boards/<uuid:pk>/detail/", BoardNestedDetailView.as_view(), name="board-nested-detail"),
+    path("boards/<uuid:pk>/move/", BoardMoveView.as_view(), name="board-move"),
     path("boards/<uuid:pk>/columns/", BoardColumnCreateView.as_view(), name="board-column-create"),
     path("columns/<uuid:pk>/", ColumnDetailView.as_view(), name="column-detail"),
+    path("columns/<uuid:pk>/move/", ColumnMoveView.as_view(), name="column-move"),
     path("columns/<uuid:pk>/cards/", ColumnCardCreateView.as_view(), name="column-card-create"),
     path("cards/<uuid:pk>/", CardDetailView.as_view(), name="card-detail"),
     path("cards/<uuid:pk>/move/", CardMoveView.as_view(), name="card-move"),

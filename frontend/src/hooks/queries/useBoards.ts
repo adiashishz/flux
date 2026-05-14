@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import * as boardsApi from "@/services/boardsApi"
+import { workspaceKeys } from "./useWorkspaces"
 
 export const boardKeys = {
   all: ["boards"] as const,
@@ -68,5 +69,29 @@ export function useDeleteColumn(boardId: string) {
   return useMutation({
     mutationFn: (id: string) => boardsApi.deleteColumn(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: boardKeys.detail(boardId) }),
+  })
+}
+
+export function useMoveColumn(boardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { board_id: string; destination_index: number } }) =>
+      boardsApi.moveColumn(id, payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: boardKeys.detail(boardId) }),
+  })
+}
+
+export function useMoveBoard(workspaceId?: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { destination_index: number } }) =>
+      boardsApi.moveBoard(id, payload),
+    onSuccess: () => {
+      if (workspaceId) {
+        qc.invalidateQueries({ queryKey: workspaceKeys.detail(workspaceId) })
+      } else {
+        qc.invalidateQueries({ queryKey: boardKeys.all })
+      }
+    },
   })
 }

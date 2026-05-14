@@ -188,12 +188,59 @@ Replace all shadcn/ui primitives with hand-rolled components that match Flux's e
 
 ---
 
+## Export — JSON & Markdown
+
+Allow users to download their data at the board or card level.
+
+**Scope:**
+- **Board export** — entire board (all columns + cards + card content) as a single file
+- **Card export** — individual card (title, description, content) as a single file
+
+**Formats:**
+- **JSON** — structured dump, useful for backups or importing into other tools
+- **Markdown** — human-readable; board exports as a single `.md` file with each column as a heading and cards as sections beneath it
+
+**Rough JSON shape (board):**
+```json
+{
+  "title": "My Board",
+  "exported_at": "2026-05-15T10:00:00Z",
+  "columns": [
+    {
+      "title": "To Do",
+      "cards": [
+        { "title": "Card I", "description": "...", "content": "..." }
+      ]
+    }
+  ]
+}
+```
+
+**Rough Markdown shape (board):**
+```markdown
+# My Board
+
+## To Do
+
+### Card I
+> This is a description for card
+
+[card content here]
+```
+
+**Implementation notes (when the time comes):**
+- Backend: add `GET /api/v1/boards/:id/export/?format=json` and `?format=markdown` endpoints — backend renders the file, sets `Content-Disposition: attachment`
+- Frontend: export button in the board header (three-dot menu or dedicated icon); card export from the EditorPanel toolbar
+- No new models needed — pure read/serialise
+
+---
+
 ## Other Ideas (Parking Lot)
 
 - **Card due dates** — add `due_date` field to Card, show in card UI
 - **Renameable app** — app name ("Flux") is hardcoded in `Sidebar.tsx` and `index.html`. When needed, centralise it in `src/config.ts` (`APP_NAME`, `APP_INITIAL`) and update those two files. One-line change after that.
 - **Card labels/tags** — lightweight tagging system for cards
-- **Drag-and-drop** — reorder cards within a column and move across columns (`@dnd-kit/sortable` already installed)
+- ~~**Drag-and-drop**~~ ✅ — reorder cards within a column, move cards across columns, reorder columns, reorder boards. See `docs/drag-and-drop.md`.
 - **Search** — wire the existing `GET /api/v1/search/?q=` endpoint to the Quick Search bar
 - **Board templates** — create a board with predefined columns (e.g. "To Do / In Progress / Done")
 - **Archive** — soft-delete boards/cards instead of hard delete
@@ -242,7 +289,7 @@ All planned features at a glance:
 |---------|---------|
 | **Projects** | Third sidebar section for time-bounded efforts, sits alongside Workspaces |
 | **App Header** | Breadcrumb + global search + notifications + user profile bar |
-| **Drag-and-drop** | Reorder and move cards across columns (`@dnd-kit/sortable` already installed) |
+| ~~**Drag-and-drop**~~ ✅ | Cards (within column + cross-column), columns, and boards are all draggable and reorderable. See `docs/drag-and-drop.md`. |
 | **Search** | Wire `GET /api/v1/search/?q=` to a Quick Search bar in the sidebar/header |
 | **Card due dates** | `due_date` field on Card model, displayed in card UI |
 | **Card labels/tags** | Lightweight colour-coded tagging system for cards |
@@ -253,3 +300,4 @@ All planned features at a glance:
 | **Launcher script** | `flux.sh` / `flux.bat` that starts Docker + backend and opens the browser in one command |
 | **Auth & Sync** | JWT login/register, user-scoped data, hosted backend — access your boards from any device |
 | **Own component library** | Replace all shadcn/ui primitives with hand-rolled Tailwind v4 components; remove all Radix/base-ui dependencies |
+| **Export (JSON & Markdown)** | Download boards or individual cards as JSON (structured backup) or Markdown (human-readable) |
