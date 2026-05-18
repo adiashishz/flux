@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useParams } from "react-router-dom"
+import { usePageTitle } from "@/hooks/usePageTitle"
 import { Kanban, List, Calendar } from "lucide-react"
 import {
   DndContext,
@@ -68,6 +69,8 @@ export function BoardView() {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   )
+
+  usePageTitle(board?.title ?? "")
 
   function handleDragStart(event: DragStartEvent) {
     if (!board) return

@@ -3,7 +3,7 @@ import StarterKit from "@tiptap/starter-kit"
 import Underline from "@tiptap/extension-underline"
 import TaskList from "@tiptap/extension-task-list"
 import TaskItem from "@tiptap/extension-task-item"
-import { Markdown } from "tiptap-markdown"
+import { Markdown } from "@tiptap/markdown"
 
 const ListShortcuts = Extension.create({
   name: "listShortcuts",
@@ -11,7 +11,25 @@ const ListShortcuts = Extension.create({
     return {
       Tab: ({ editor }) => {
         if (editor.isActive("listItem") || editor.isActive("taskItem")) {
-          editor.chain().focus().sinkListItem(editor.isActive("taskItem") ? "taskItem" : "listItem").run()
+          const itemType = editor.isActive("taskItem") ? "taskItem" : "listItem"
+          if (editor.chain().focus().sinkListItem(itemType).run()) return true
+          // First item in its list — merge with the preceding list node if adjacent, then sink
+          editor.chain().focus().command(({ state, dispatch }) => {
+            const { $from } = state.selection
+            for (let d = $from.depth; d > 0; d--) {
+              const name = $from.node(d).type.name
+              if (name === "bulletList" || name === "orderedList" || name === "taskList") {
+                const pos = $from.before(d)
+                const nodeBefore = pos > 0 ? state.doc.resolve(pos).nodeBefore : null
+                if (nodeBefore?.type.name.endsWith("List")) {
+                  if (dispatch) dispatch(state.tr.join(pos))
+                  return true
+                }
+                break
+              }
+            }
+            return false
+          }).sinkListItem(itemType).run()
           return true
         }
         return false
@@ -35,7 +53,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 
 interface TipTapEditorProps {
   value: string
-  onChange: (markdown: string) => void
+  onChange: (json: string, plainText: string) => void
 }
 
 const TOOLBAR = [
@@ -55,12 +73,28 @@ export function TipTapEditor({ value, onChange }: TipTapEditorProps) {
       Underline,
       TaskList,
       TaskItem.configure({ nested: true }),
-      Markdown.configure({ html: false, tightLists: true }),
+      Markdown,
       ListShortcuts,
     ],
-    content: value,
+    content: '',
+    onCreate({ editor }) {
+      if (!value) return
+      try {
+        const parsed = JSON.parse(value)
+        if (parsed?.type === 'doc') {
+          editor.commands.setContent(parsed)
+          return
+        }
+      } catch { /* not JSON */ }
+      try {
+        const parsed = (editor.storage as any).markdown.manager.parse(value)
+        editor.commands.setContent(parsed)
+      } catch {
+        editor.commands.setContent(value)
+      }
+    },
     onUpdate({ editor }) {
-      onChange(editor.storage.markdown.getMarkdown())
+      onChange(JSON.stringify(editor.getJSON()), editor.getText())
     },
     editorProps: {
       attributes: {

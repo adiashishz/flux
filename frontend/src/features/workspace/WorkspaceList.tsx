@@ -4,11 +4,13 @@ import { Plus, FolderOpen, SlidersHorizontal } from "lucide-react"
 import { CreateWorkspaceDialog } from "./components/CreateWorkspaceDialog"
 import { useWorkspaces } from "@/hooks/queries/useWorkspaces"
 import relativeTime from "@/utils/relativeTime"
+import { usePageTitle } from "@/hooks/usePageTitle"
 
 export function WorkspaceList() {
   const navigate = useNavigate()
   const [dialogOpen, setDialogOpen] = useState(false)
   const { data: workspaces, isLoading } = useWorkspaces()
+  usePageTitle("Workspaces")
 
   return (
     <div className="flex flex-col h-full bg-[#E2E8F0]">

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { Plus, SlidersHorizontal, Kanban, List, Calendar, MoreVertical, Pencil, Trash2 } from "lucide-react"
+import { usePageTitle } from "@/hooks/usePageTitle"
 import {
   DndContext,
   DragOverlay,
@@ -171,6 +172,8 @@ export function BoardList() {
       { onError: () => qc.setQueryData(queryKey, snapshot) }
     )
   }
+
+  usePageTitle(title)
 
   return (
     <div className="flex flex-col h-full bg-[#E2E8F0]">

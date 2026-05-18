@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { X, Pin, Trash2 } from "lucide-react"
+import { X, Pin, Trash2, Maximize2, Minimize2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useUIStore } from "@/store/ui"
 import { useCard, useUpdateCard, useDeleteCard } from "@/hooks/queries/useCards"
@@ -12,6 +12,8 @@ export function EditorPanel() {
   const open = useUIStore((s) => s.editorPanelOpen)
   const closeEditor = useUIStore((s) => s.closeEditor)
   const selectedCardId = useUIStore((s) => s.selectedCardId)
+  const editorExpanded = useUIStore((s) => s.editorExpanded)
+  const toggleEditorExpanded = useUIStore((s) => s.toggleEditorExpanded)
   const { id: boardId = "" } = useParams<{ id?: string }>()
 
   const { data: card } = useCard(selectedCardId)
@@ -49,14 +51,20 @@ export function EditorPanel() {
     if (editingColumn) columnInputRef.current?.select()
   }, [editingColumn])
 
-  const debouncedContent = useDebounce(content, 1500)
+  const contentTextRef = useRef("")
+  const debouncedContent = useDebounce(content, 800)
 
   useEffect(() => {
     if (!initialized.current || !card) return
     if (debouncedContent === savedContent.current) return
     savedContent.current = debouncedContent
-    updateCard({ id: card.id, data: { content_markdown: debouncedContent, content_preview: debouncedContent.slice(0, 200) } })
+    updateCard({ id: card.id, data: { content_markdown: debouncedContent, content_preview: contentTextRef.current.slice(0, 200) } })
   }, [debouncedContent])
+
+  function handleContentChange(json: string, plainText: string) {
+    contentTextRef.current = plainText
+    setContent(json)
+  }
 
   function commitDescription() {
     if (!card) return
@@ -117,7 +125,7 @@ export function EditorPanel() {
     <aside
       className={cn(
         "h-screen bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col shrink-0 transition-all duration-300 overflow-hidden relative z-20",
-        open ? "w-[450px]" : "w-0"
+        open ? (editorExpanded ? "w-[750px]" : "w-[450px]") : "w-0"
       )}
     >
       {/* Top bar */}
@@ -145,6 +153,13 @@ export function EditorPanel() {
           )}
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={toggleEditorExpanded}
+            className="p-1.5 rounded-md text-[#94A3B8] hover:bg-slate-100 hover:text-[#475569] transition-colors"
+            title={editorExpanded ? "Collapse" : "Expand"}
+          >
+            {editorExpanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+          </button>
           <button className="p-1.5 rounded-md text-[#94A3B8] hover:bg-slate-100 hover:text-[#475569] transition-colors" title="Pin">
             <Pin size={15} />
           </button>
@@ -186,7 +201,7 @@ export function EditorPanel() {
               placeholder="Add a short description…"
             />
 
-            <TipTapEditor key={card.id} value={card.content_markdown} onChange={setContent} />
+            <TipTapEditor key={card.id} value={card.content_markdown} onChange={handleContentChange} />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-sm text-[#94A3B8]">

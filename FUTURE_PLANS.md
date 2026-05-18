@@ -162,7 +162,7 @@ The header was removed to keep the UI minimal — the sidebar handles all naviga
 
 ## Editor Enhancements
 
-Extend the TipTap editor in `EditorPanel` with richer content types. The current stack (`StarterKit`, `Underline`, `TaskList`, `TaskItem`, `tiptap-markdown`) is the base — all additions follow the same extension pattern.
+Extend the TipTap editor in `EditorPanel` with richer content types. The current stack is `StarterKit`, `Underline`, `TaskList`, `TaskItem.configure({ nested: true })`, `@tiptap/markdown` (official v3.23.4 — used only for parsing legacy markdown content on load), and a custom `ListShortcuts` extension. Content is stored as **TipTap JSON** (`editor.getJSON()`) in the `content_markdown` DB field — do not revert to markdown storage.
 
 **Low effort — drop-in TipTap extensions:**
 
@@ -188,7 +188,7 @@ Extend the TipTap editor in `EditorPanel` with richer content types. The current
 **Implementation notes (when the time comes):**
 - Add extensions one at a time — each is its own PR
 - Toolbar in `TipTapEditor.tsx` grows a button per new extension; keep it icon-only with tooltips to avoid clutter
-- `tiptap-markdown` handles serialisation — verify each new node round-trips correctly to markdown before shipping
+- Content is JSON — verify each new extension serialises correctly via `editor.getJSON()` and rehydrates via `editor.commands.setContent(json)` before shipping
 - Excalidraw embed: store SVG in a new `card_drawings` JSON field or as a separate model; do not bloat `content_markdown`
 - Image upload endpoint: `POST /api/v1/uploads/` → returns `{ url }` — store files in `/media/`, served via Django in dev and a CDN/object store in prod
 

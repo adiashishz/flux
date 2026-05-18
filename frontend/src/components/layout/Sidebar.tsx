@@ -56,9 +56,7 @@ export function Sidebar() {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5">
-          <div className="w-8 h-8 rounded-lg bg-teal-500 flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-sm">F</span>
-          </div>
+          <img src="/Flux_transparent.png" alt="Flux" className="w-8 h-8 rounded-lg shrink-0" />
           <span className="text-white font-semibold text-base tracking-tight">Flux</span>
           <button
             onClick={toggleSidebar}

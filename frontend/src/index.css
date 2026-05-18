@@ -54,6 +54,7 @@
 
 /* TipTap editor content styles */
 .tiptap-content > * + * { margin-top: 0.6em; }
+.tiptap-content p + p { margin-top: 1em; }
 .tiptap-content strong { font-weight: 600; }
 .tiptap-content em { font-style: italic; }
 .tiptap-content u { text-decoration: underline; }

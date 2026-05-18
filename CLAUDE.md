@@ -89,7 +89,8 @@ API docs: http://localhost:7000/api/docs/
 - **`src/lib/utils.ts`** — re-export shim for shadcn compat only, do not add logic here
 - **Tailwind v4** — no `tailwind.config.js`, all tokens in `src/index.css` `@theme {}` block
 - **Vite proxy** — `/api` → `http://localhost:7000` (set in `vite.config.ts`)
-- **EditorPanel auto-save** — debounced 800ms, sends `content_preview` (first 200 chars) with every save
+- **EditorPanel auto-save** — debounced 800ms, sends `content_preview` (first 200 plain-text chars) with every save
+- **Editor content format** — stored as **TipTap JSON** (`editor.getJSON()` serialised to string) in the `content_markdown` DB field. The field name is legacy; the value is always JSON now. Loading: tries `JSON.parse` first (new format), falls back to `@tiptap/markdown` `manager.parse()` for older markdown content. `content_preview` is extracted via `editor.getText()` (plain text, no markup). Do **not** switch back to markdown storage — JSON preserves all structure (empty list items, blank paragraphs) that markdown cannot round-trip.
 
 ---
 
