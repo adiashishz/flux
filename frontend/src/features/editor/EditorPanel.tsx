@@ -125,7 +125,7 @@ export function EditorPanel() {
     <aside
       className={cn(
         "h-screen bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col shrink-0 transition-all duration-300 overflow-hidden relative z-20",
-        open ? (editorExpanded ? "w-[750px]" : "w-[450px]") : "w-0"
+        open ? (editorExpanded ? "w-[900px]" : "w-[750px]") : "w-0"
       )}
     >
       {/* Top bar */}
