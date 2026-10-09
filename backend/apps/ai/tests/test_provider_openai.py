@@ -21,8 +21,13 @@ TOOL = {"name": "create_card", "description": "Create a card", "input_schema": {
 # ---- fakes ----------------------------------------------------------------------------------
 
 
-def fragment(index=None, id=None, name=None, arguments=None):
-    return SimpleNamespace(index=index, id=id, function=SimpleNamespace(name=name, arguments=arguments))
+def fragment(index=None, id=None, name=None, arguments=None, extra_content=None, via_model_extra=False):
+    node = SimpleNamespace(index=index, id=id, function=SimpleNamespace(name=name, arguments=arguments))
+    if via_model_extra:  # how the openai SDK exposes fields it does not model
+        node.model_extra = {"extra_content": extra_content}
+    else:
+        node.extra_content = extra_content
+    return node
 
 
 def chunk(content=None, tool_calls=None, finish=None, usage=None, choices=True):
@@ -236,7 +241,8 @@ def test_stream_options_are_only_sent_when_enabled(make, settings):
         (openai.APIConnectionError(request=REQUEST), "gemini", "Could not reach gemini at https://example.test/v1."),
         (http_error(openai.NotFoundError, 404), "groq", "does not know the model 'model-x'"),
         (http_error(openai.BadRequestError, 400, "model does not support tools"), "groq", "model does not support tools"),
-        (http_error(openai.InternalServerError, 500), "groq", "returned an error"),
+        (http_error(openai.InternalServerError, 500, "backend exploded"), "groq", r"returned an error \(HTTP 500\)\. backend exploded"),
+        (http_error(openai.RateLimitError, 429, "limit: 5, model: flash"), "gemini", "rate limiting.*limit: 5, model: flash"),
     ],
 )
 def test_vendor_errors_become_readable_llm_errors(make, error, name, expected):
@@ -326,3 +332,49 @@ def test_parse_json_text_rejects_text_without_an_object():
     with pytest.raises(ValueError):
         parse_json_text("no braces here")
     assert parse_json_text(' {"a": 1} ') == {"a": 1}
+
+
+# ---- vendor data that must round trip (Gemini thought signatures) -------------------------------
+
+SIGNATURE = {"google": {"thought_signature": "sig-abc"}}
+
+
+@pytest.mark.parametrize("via_model_extra", [False, True])
+def test_a_thought_signature_on_a_streamed_tool_call_is_kept(make, via_model_extra):
+    provider, _ = make([
+        chunk(tool_calls=[fragment(None, "c1", "list_boards", "{}", extra_content=SIGNATURE, via_model_extra=via_model_extra)]),
+        chunk(finish="stop"),
+    ])
+    call = run_turn(provider)[1].tool_calls[0]
+    assert call.extra == SIGNATURE
+
+
+def test_extra_data_is_merged_when_it_arrives_in_several_chunks(make):
+    provider, _ = make([
+        chunk(tool_calls=[fragment(0, "c1", "list_boards", "", extra_content={"google": {"a": 1}})]),
+        chunk(tool_calls=[fragment(0, None, None, "{}", extra_content={"other": 2})]),
+        chunk(finish="tool_calls"),
+    ])
+    assert run_turn(provider)[1].tool_calls[0].extra == {"google": {"a": 1}, "other": 2}
+
+
+def test_a_call_with_malformed_arguments_still_keeps_its_signature(make):
+    provider, _ = make([chunk(tool_calls=[fragment(0, "c", "x", "{bad", extra_content=SIGNATURE)]), chunk(finish="tool_calls")])
+    call = run_turn(provider)[1].tool_calls[0]
+    assert call.error and call.extra == SIGNATURE
+
+
+def test_the_signature_is_echoed_back_on_the_assistant_tool_call():
+    from apps.ai.services.providers.base import TurnResult, assistant_blocks
+
+    blocks = assistant_blocks(TurnResult(tool_calls=[ToolCall("c1", "list_boards", {}, extra=SIGNATURE), ToolCall("c2", "get_board", {"board_id": "b"})]))
+    out = to_openai_messages("s", [{"role": "assistant", "content": blocks}])
+    first, second = out[1]["tool_calls"]
+    assert first["extra_content"] == SIGNATURE
+    assert "extra_content" not in second
+
+
+def test_calls_without_extra_data_produce_unchanged_blocks():
+    from apps.ai.services.providers.base import TurnResult, assistant_blocks
+
+    assert assistant_blocks(TurnResult(tool_calls=[ToolCall("c", "n", {})])) == [{"type": "tool_use", "id": "c", "name": "n", "input": {}}]

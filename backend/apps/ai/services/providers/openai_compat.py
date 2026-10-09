@@ -25,11 +25,14 @@ def to_openai_messages(system, messages):
             converted.append({"role": message["role"], "content": content})
         elif message["role"] == "assistant":
             entry = {"role": "assistant", "content": "".join(b["text"] for b in content if b["type"] == "text") or None}
-            calls = [
-                {"id": b["id"], "type": "function", "function": {"name": b["name"], "arguments": json.dumps(b["input"])}}
-                for b in content
-                if b["type"] == "tool_use"
-            ]
+            calls = []
+            for b in content:
+                if b["type"] != "tool_use":
+                    continue
+                call = {"id": b["id"], "type": "function", "function": {"name": b["name"], "arguments": json.dumps(b["input"])}}
+                if b.get("extra_content"):  # Gemini rejects the next turn without its thought_signature
+                    call["extra_content"] = b["extra_content"]
+                calls.append(call)
             if calls:
                 entry["tool_calls"] = calls
             converted.append(entry)
@@ -78,10 +81,11 @@ class OpenAICompatProvider(Provider):
 
     def _describe(self, exc):
         who = self.name
+        detail = self._detail(exc)
         if isinstance(exc, (openai.AuthenticationError, openai.PermissionDeniedError)):
             return f"{who} rejected the API key."
         if isinstance(exc, openai.RateLimitError):
-            return f"{who} is rate limiting requests (free tiers allow only a few per minute). Try again in a moment."
+            return f"{who} is rate limiting requests (free tiers allow only a few per minute). Try again in a moment.{detail}"
         if isinstance(exc, openai.APIConnectionError):
             hint = " Is Ollama running and listening on 0.0.0.0?" if who == "ollama" else ""
             return f"Could not reach {who} at {self.base_url}.{hint}"
@@ -89,7 +93,14 @@ class OpenAICompatProvider(Provider):
             return f"{who} does not know the model '{self.model}'."
         if isinstance(exc, openai.BadRequestError):
             return f"{who} rejected the request: {str(exc.message)[:MAX_PROVIDER_MESSAGE]}"
-        return f"{who} returned an error."
+        status = getattr(exc, "status_code", None)
+        return f"{who} returned an error{f' (HTTP {status})' if status else ''}.{detail}"
+
+    @staticmethod
+    def _detail(exc):
+        """The provider's own explanation, trimmed (for example which quota was hit)."""
+        message = str(getattr(exc, "message", "") or "").replace("\n", " ").strip()
+        return f" {message[:MAX_PROVIDER_MESSAGE]}" if message else ""
 
     # ---- chat turns -------------------------------------------------------------------------
 
@@ -134,9 +145,12 @@ class OpenAICompatProvider(Provider):
         the index, by id; a piece with neither continues the most recent call."""
         index = getattr(fragment, "index", None)
         key = index if index is not None else (fragment.id or (list(slots)[-1] if slots else 0))
-        slot = slots.setdefault(key, {"id": "", "name": "", "arguments": ""})
+        slot = slots.setdefault(key, {"id": "", "name": "", "arguments": "", "extra": None})
         if fragment.id and not slot["id"]:
             slot["id"] = fragment.id
+        extra = getattr(fragment, "extra_content", None) or (getattr(fragment, "model_extra", None) or {}).get("extra_content")
+        if extra:
+            slot["extra"] = {**(slot["extra"] or {}), **extra}
         function = fragment.function
         if function is not None:
             if function.name and not slot["name"]:
@@ -149,10 +163,10 @@ class OpenAICompatProvider(Provider):
         try:
             arguments = parse_json_text(slot["arguments"]) if slot["arguments"].strip() else {}
         except ValueError as exc:
-            return ToolCall(call_id, slot["name"], {}, error=f"Your arguments were not valid JSON ({exc}). Send a JSON object.")
+            return ToolCall(call_id, slot["name"], {}, error=f"Your arguments were not valid JSON ({exc}). Send a JSON object.", extra=slot["extra"])
         if not isinstance(arguments, dict):
-            return ToolCall(call_id, slot["name"], {}, error="Your arguments must be a JSON object.")
-        return ToolCall(call_id, slot["name"], arguments)
+            return ToolCall(call_id, slot["name"], {}, error="Your arguments must be a JSON object.", extra=slot["extra"])
+        return ToolCall(call_id, slot["name"], arguments, extra=slot["extra"])
 
     # ---- structured output ------------------------------------------------------------------
 

@@ -131,3 +131,11 @@ def test_the_summary_counts_passes(world, play):
     play(final_message(text_block("Which card?")), final_message(text_block("Sure.")))
     summary = run_tools(world, dataset)
     assert (summary["cases"], summary["passed"], summary["accuracy"]) == (2, 1, 0.5)
+
+
+def test_the_pause_is_applied_between_cases_but_not_before_the_first(world, play, monkeypatch):
+    waits = []
+    monkeypatch.setattr("apps.ai.evals.tools.time.sleep", waits.append)
+    play(final_message(text_block("a")), final_message(text_block("b")), final_message(text_block("c")))
+    run_tools(world, {"cases": [case("ambiguous-asks"), case("read-only"), case("ambiguous-asks")]}, pause=7)
+    assert waits == [7, 7]

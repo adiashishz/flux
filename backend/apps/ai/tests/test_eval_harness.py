@@ -108,7 +108,8 @@ def test_live_mode_records_the_provider_and_model_in_the_report(settings, monkey
     settings.AI_PROVIDER_KEYS = {"groq": "k"}
     seen = {}
 
-    def fake_run_tools(world, dataset):
+    def fake_run_tools(world, dataset, pause=0.0):
+        seen["pause"] = pause
         from apps.ai.services.providers import get_provider
 
         seen["provider"] = (get_provider().name, get_provider().model)
@@ -116,7 +117,7 @@ def test_live_mode_records_the_provider_and_model_in_the_report(settings, monkey
 
     monkeypatch.setattr(run_evals, "run_tools", fake_run_tools)
     out = tmp_path / "r.json"
-    call_command("run_evals", live=True, provider="groq", model="grq-model", min_recall=0.0, min_mrr=0.0, json_path=str(out))
-    assert seen["provider"] == ("groq", "grq-model")
+    call_command("run_evals", live=True, provider="groq", model="grq-model", pause=12.5, min_recall=0.0, min_mrr=0.0, json_path=str(out))
+    assert seen["provider"] == ("groq", "grq-model") and seen["pause"] == 12.5
     assert "Provider: groq / grq-model" in capsys.readouterr().out
     assert '"model": "grq-model"' in out.read_text()

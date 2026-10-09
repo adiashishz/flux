@@ -15,6 +15,7 @@ class ToolCall:
     name: str
     arguments: dict
     error: str | None = None  # set when the model sent arguments we could not parse
+    extra: dict | None = None  # vendor data that must be sent back with the call (Gemini thought_signature)
 
 
 @dataclass
@@ -50,5 +51,9 @@ def assistant_blocks(turn):
     blocks = []
     if turn.text:
         blocks.append({"type": "text", "text": turn.text})
-    blocks.extend({"type": "tool_use", "id": c.id, "name": c.name, "input": c.arguments} for c in turn.tool_calls)
+    for call in turn.tool_calls:
+        block = {"type": "tool_use", "id": call.id, "name": call.name, "input": call.arguments}
+        if call.extra:
+            block["extra_content"] = call.extra
+        blocks.append(block)
     return blocks

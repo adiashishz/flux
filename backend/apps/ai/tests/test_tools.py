@@ -135,3 +135,33 @@ def test_search_cards_wraps_semantic_search(monkeypatch):
     assert ok
     assert data["results"][0]["card_id"] == "c1"
     assert len(data["results"][0]["preview"]) == 120
+
+
+def test_scoped_boards_hide_every_other_board_from_the_model():
+    from apps.ai.tools import scoped_boards
+
+    mine, other = BoardFactory(title="Eval"), BoardFactory(title="Private")
+    ColumnFactory(board=other)
+    with scoped_boards([mine.id]):
+        ok, data = run_tool("list_boards", {})
+        assert [b["title"] for b in data["boards"]] == ["Eval"]
+        ok, data = run_tool("get_board", {"board_id": str(other.id)})
+        assert not ok and data["error"] == "Board not found."
+    ok, data = run_tool("list_boards", {})
+    assert {b["title"] for b in data["boards"]} == {"Eval", "Private"}
+
+
+def test_the_live_eval_runs_the_model_inside_the_board_scope(monkeypatch):
+    """A real model must never be handed the titles of boards outside the eval corpus."""
+    from apps.ai.evals.tools import run_case
+    from apps.ai.evals.world import build_world, load_dataset
+    from apps.ai.services import chat
+    from .fakes import FakeProvider, final_message, text_block, tool_use_block
+
+    world = build_world(load_dataset("corpus"), embed=False)
+    BoardFactory(title="My Real Private Board")
+    provider = FakeProvider(final_message(tool_use_block("t1", "list_boards", {})), final_message(text_block("ok")))
+    monkeypatch.setattr(chat, "get_provider", lambda: provider)
+    run_case(world, next(c for c in load_dataset("tools")["cases"] if c["id"] == "read-only"))
+    sent_back = str(provider.calls[1]["messages"])
+    assert "Work" in sent_back and "My Real Private Board" not in sent_back

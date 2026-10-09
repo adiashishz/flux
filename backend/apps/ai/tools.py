@@ -1,6 +1,8 @@
 """Tools the assistant may call. Every mutation goes through the workspace services, the same
 code path as the HTTP API. Deleting is never executed here: it only asks the user to confirm."""
 import uuid
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Callable
 
@@ -15,6 +17,25 @@ TITLE_MAX = 500
 DESCRIPTION_MAX = 2000
 MAX_CARDS_PER_COLUMN = 100
 UUID_SCHEMA = {"type": "string", "description": "UUID"}
+
+
+_board_scope = ContextVar("tool_board_scope", default=None)
+
+
+@contextmanager
+def scoped_boards(board_ids):
+    """Inside the block, list_boards and get_board only see these boards. The evals use it so a live
+    model never sees (or sends to a provider) the boards of your real workspace."""
+    token = _board_scope.set(frozenset(str(board_id) for board_id in board_ids))
+    try:
+        yield
+    finally:
+        _board_scope.reset(token)
+
+
+def _in_scope(board_id):
+    scope = _board_scope.get()
+    return scope is None or str(board_id) in scope
 
 
 class ToolError(Exception):
@@ -74,6 +95,7 @@ def list_boards_tool(arguments):
                 "workspace": board.workspace.title if board.workspace else None,
             }
             for board in list_boards()
+            if _in_scope(board.id)
         ]
     }
 
@@ -83,6 +105,8 @@ def get_board_tool(arguments):
     try:
         board = get_board_detail(board_id)
     except Board.DoesNotExist:
+        raise ToolError("Board not found.")
+    if not _in_scope(board.id):
         raise ToolError("Board not found.")
     return {
         "board_id": str(board.id),

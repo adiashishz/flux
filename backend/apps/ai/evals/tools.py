@@ -5,6 +5,7 @@ from django.db import transaction
 from apps.ai.evals.world import cards_in_column, column_keys, snapshot
 from apps.ai.services import chat
 from apps.ai.services.search import scoped_search
+from apps.ai.tools import scoped_boards
 from apps.workspace.models import Card
 
 MUTATING = {"create_card", "update_card", "move_card"}
@@ -84,7 +85,7 @@ def run_case(world, case):
         board_id = world.boards[case["board"]].id if case.get("board") else None
         started = time.monotonic()
         events = []
-        with scoped_search(world.card_ids):
+        with scoped_search(world.card_ids), scoped_boards([b.id for b in world.boards.values()]):
             for event in chat.run_chat([{"role": "user", "content": case["prompt"]}], board_id=board_id):
                 events.append(event)
 
@@ -111,8 +112,12 @@ def run_case(world, case):
         transaction.savepoint_rollback(savepoint)
 
 
-def run_tools(world, dataset):
-    results = [run_case(world, case) for case in dataset["cases"]]
+def run_tools(world, dataset, pause=0.0):
+    results = []
+    for number, case in enumerate(dataset["cases"]):
+        if number and pause:
+            time.sleep(pause)  # free tiers allow only a few requests per minute
+        results.append(run_case(world, case))
     passed = sum(r["passed"] for r in results)
     return {
         "cases": len(results),

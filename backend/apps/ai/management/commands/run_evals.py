@@ -20,6 +20,7 @@ class Command(BaseCommand):
         parser.add_argument("--live", action="store_true", help="Also run the tool calling cases against the real Anthropic API.")
         parser.add_argument("--provider", help="Model vendor for --live (default: AI_PROVIDER). Use it to compare vendors.")
         parser.add_argument("--model", help="Model name for --live (default: AI_MODEL).")
+        parser.add_argument("--pause", type=float, default=0.0, help="Seconds to wait between tool cases (free tiers allow only a few requests per minute).")
         parser.add_argument("--min-recall", type=float, default=0.85, help="Fail if recall@5 is below this.")
         parser.add_argument("--min-mrr", type=float, default=0.7, help="Fail if MRR is below this.")
         parser.add_argument("--min-tool-accuracy", type=float, default=0.8, help="Fail (with --live) if tool accuracy is below this.")
@@ -40,7 +41,7 @@ class Command(BaseCommand):
                 status = provider_status(options["provider"], options["model"])
                 report["provider"] = {"name": status["provider"], "model": status["model"]}
                 with use_provider(options["provider"], options["model"]):
-                    report["tools"] = run_tools(world, load_dataset("tools"))
+                    report["tools"] = run_tools(world, load_dataset("tools"), pause=options["pause"])
             transaction.set_rollback(True)
 
         self._print(report, live)

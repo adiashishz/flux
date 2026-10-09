@@ -35,7 +35,7 @@ A button in the panel (visible when a board is open) starts a background run: **
 
 ## Evals
 
-`make eval` (or `uv run python manage.py run_evals`) measures the assistant. It builds a 30 card corpus through the real services inside a transaction that is rolled back, so your real cards are never read or changed.
+`make eval` (or `uv run python manage.py run_evals`) measures the assistant. It builds a 30 card corpus through the real services inside a transaction that is rolled back, so your real cards are never changed. The retrieval eval only ranks the eval corpus, and the live tool eval is limited to the eval's own boards and cards (`scoped_boards`, `scoped_search`), so a hosted model never sees your real board titles.
 
 - **Retrieval** (needs no API key, runs the local model): 28 paraphrased queries plus 4 unrelated ones. Reports recall@1, recall@5, MRR, a score cutoff sweep, and the misses.
 - **Tool calling** (`--live`, calls the Anthropic API): 12 prompts scored by the database state afterwards (card created in the right column, card moved, nothing changed on a read only question, delete only asks, and so on).
@@ -43,7 +43,8 @@ A button in the panel (visible when a board is open) starts a background run: **
 
 Measured on 2026-10-09 with `BAAI/bge-small-en-v1.5`: recall@1 0.96, recall@5 1.00, MRR 0.97. The right card scored 0.75 on median and the best unrelated card 0.57, so `AI_SEARCH_MIN_SCORE` is now 0.55 (it keeps recall@5 at 1.00 and cuts answers to unrelated queries from 4/4 to 2/4; 0.6 answers none of them but loses one right answer).
 
-Read those numbers with care: the corpus is 30 cards, the queries were written by the same person who wrote the cards, and the cards are clearly different from each other. They show the plumbing and the calibration work, not production accuracy. Grow `datasets/` with real, messier cards to tighten them. The tool calling score has not been measured yet because it needs a live key.
+Read those numbers with care: the corpus is 30 cards, the queries were written by the same person who wrote the cards, and the cards are clearly different from each other. They show the plumbing and the calibration work, not production accuracy. Grow `datasets/` with real, messier cards to tighten them. 
+Tool calling, measured on 2026-10-09 against the real Gemini API (`gemini-3.5-flash-lite`, free tier): **12 of 12 cases passed** (`make eval ARGS="--live --pause 30"`, about 25 model calls over 6 minutes). Same caveats: 12 cases written by the same person, one run, a non deterministic model, and token counts show 0 because Gemini's compatible endpoint does not report usage by default. Repeat it per model before trusting a number, and add messier prompts.
 
 ## Model providers
 
@@ -70,7 +71,9 @@ The assistant is not tied to one vendor. `AI_PROVIDER` picks one of:
 - **Prompt size matters on small token budgets.** The plan prompt is capped at `AI_PLAN_MAX_CARDS` (default 80) cards with 120 character descriptions. The tool definitions are about a thousand tokens.
 - **Gemini free tier:** prompts and responses may be used by Google to improve its products. Do not put private notes through it.
 - **Ollama:** the backend runs in Docker, so Ollama must listen on all interfaces (`OLLAMA_HOST=0.0.0.0 ollama serve`); the containers reach it at `host.docker.internal`. For a backend outside Docker set `AI_BASE_URL=http://localhost:11434/v1`. Small local models often call tools badly; run the evals on the model you pick.
+- **Gemini thought signatures:** newer Gemini models attach `extra_content.google.thought_signature` to every tool call and reject the next request with a 400 if it is not sent back. The adapter keeps any vendor `extra_content` on a tool call and echoes it in the assistant message (found by running the real API: a first live eval scored 0 of 12 because of it).
 - **Quirks the adapter already handles:** tool call chunks without an `index`, `stop` as the finish reason when tools were called, missing usage numbers (token counts show 0 unless `AI_STREAM_USAGE=true` works on your provider), malformed tool argument JSON (sent back to the model as an error so it can retry), `json_schema` response format not supported (falls back to JSON mode, tolerates code fences, one repair retry).
+- **Free tier pacing:** one model had a limit of 5 requests per minute during testing, and a chat uses about 4 model calls. `run_evals --pause SECONDS` spaces the cases out; the limits are shown in AI Studio and change.
 - **Compare models:** `make eval ARGS="--live --provider gemini --model <model>"` and the same for `ollama` print the tool calling accuracy per model.
 
 ## Turning it on
@@ -104,4 +107,4 @@ Unless `AI_ENABLED=true` and the provider is fully configured, the chat and plan
 
 - Backend: `make test`. Tools, the loop (with a scripted `FakeProvider`), both provider adapters (with fake SDK clients that replay vendor quirks), provider configuration, and the endpoints are covered in `apps/ai/tests/`.
 - Frontend: `pnpm test` in `frontend/` covers the SSE parser and the chat reducer.
-- Both real SDKs were also checked against local stub servers that speak Anthropic's streaming wire format and the OpenAI chat completions format (including a variant with every quirk above), through gunicorn, nginx and the Celery worker. Those runs proved text arrives incrementally, deletes never execute, malformed tool arguments are recovered from, and plan my week works with and without `json_schema` support. No real vendor API has been called yet.
+- Both real SDKs were also checked against local stub servers that speak Anthropic's streaming wire format and the OpenAI chat completions format (including a variant with every quirk above), through gunicorn, nginx and the Celery worker. Those runs proved text arrives incrementally, deletes never execute, malformed tool arguments are recovered from, and plan my week works with and without `json_schema` support. The OpenAI adapter and Gemini were then checked against the real Gemini API.
