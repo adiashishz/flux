@@ -1,4 +1,4 @@
-import { Kanban, Search, ChevronDown, ChevronRight, ChevronsLeft, Plus, MoreVertical, Pencil, Trash2 } from "lucide-react"
+import { Kanban, Search, Sparkles, ChevronDown, ChevronRight, ChevronsLeft, Plus, MoreVertical, Pencil, Trash2 } from "lucide-react"
 import { useState, useRef } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { cn } from "@/lib/utils"
@@ -10,6 +10,8 @@ export function Sidebar() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const setSearchOpen = useUIStore((s) => s.setSearchOpen)
+  const aiPanelOpen = useUIStore((s) => s.aiPanelOpen)
+  const setAiPanelOpen = useUIStore((s) => s.setAiPanelOpen)
   const [workspacesOpen, setWorkspacesOpen] = useState(true)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [renamingId, setRenamingId] = useState<string | null>(null)
@@ -80,6 +82,12 @@ export function Sidebar() {
             icon={<Search size={16} />}
             label="Search by meaning"
             onClick={() => setSearchOpen(true)}
+          />
+          <NavItem
+            icon={<Sparkles size={16} />}
+            label="Ask AI"
+            active={aiPanelOpen}
+            onClick={() => setAiPanelOpen(!aiPanelOpen)}
           />
         </nav>
 
