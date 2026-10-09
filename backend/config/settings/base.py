@@ -115,6 +115,8 @@ ANTHROPIC_API_KEY = config("ANTHROPIC_API_KEY", default="")
 ANTHROPIC_MODEL = config("ANTHROPIC_MODEL", default="claude-sonnet-5-5")
 AI_MAX_TOKENS = config("AI_MAX_TOKENS", default=2048, cast=int)
 AI_MAX_ITERATIONS = config("AI_MAX_ITERATIONS", default=6, cast=int)
+AI_PLAN_MAX_CARDS = config("AI_PLAN_MAX_CARDS", default=150, cast=int)
+AI_RUN_STALE_SECONDS = config("AI_RUN_STALE_SECONDS", default=600, cast=int)
 EMBEDDING_MODEL = config("EMBEDDING_MODEL", default="BAAI/bge-small-en-v1.5")
 EMBEDDING_DIMENSIONS = 384
 EMBEDDING_CACHE_DIR = config("EMBEDDING_CACHE_DIR", default="") or None

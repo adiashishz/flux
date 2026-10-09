@@ -15,13 +15,10 @@ class BoardColumnCreateView(APIView):
         except Board.DoesNotExist:
             raise Http404
 
-        last = Column.objects.filter(board=board).order_by("position").last()
-        next_position = (last.position + 1000) if last else 1000
-
         serializer = ColumnSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(board=board, position=next_position)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        column = ColumnService.create_column(board.id, serializer.validated_data["title"])
+        return Response(ColumnSerializer(column).data, status=status.HTTP_201_CREATED)
 
 
 class ColumnDetailView(APIView):

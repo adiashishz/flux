@@ -1,3 +1,6 @@
+from contextlib import contextmanager
+from contextvars import ContextVar
+
 from django.conf import settings
 from pgvector.django import CosineDistance
 
@@ -5,7 +8,20 @@ from apps.ai.models import CardEmbedding
 from apps.ai.services import embeddings
 
 
-def semantic_search(query, limit=None):
+_scope = ContextVar("semantic_search_scope", default=None)
+
+
+@contextmanager
+def scoped_search(card_ids):
+    """Limit every semantic_search call inside the block to these cards (used by the evals)."""
+    token = _scope.set(frozenset(str(card_id) for card_id in card_ids))
+    try:
+        yield
+    finally:
+        _scope.reset(token)
+
+
+def semantic_search(query, limit=None, card_ids=None):
     query = query.strip()
     if not query:
         return []
@@ -14,8 +30,10 @@ def semantic_search(query, limit=None):
     max_distance = 1 - settings.AI_SEARCH_MIN_SCORE
     limit = limit or settings.AI_SEARCH_LIMIT
 
+    scope = _scope.get() if card_ids is None else frozenset(str(card_id) for card_id in card_ids)
+    candidates = CardEmbedding.objects.all() if scope is None else CardEmbedding.objects.filter(card_id__in=scope)
     rows = (
-        CardEmbedding.objects.annotate(distance=CosineDistance("embedding", query_vector))
+        candidates.annotate(distance=CosineDistance("embedding", query_vector))
         .filter(distance__lte=max_distance)
         .select_related("card__column__board")
         .order_by("distance")[:limit]

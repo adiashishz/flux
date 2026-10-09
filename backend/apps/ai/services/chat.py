@@ -4,23 +4,13 @@ import logging
 import anthropic
 from django.conf import settings
 
-from apps.ai.services.llm import get_client
+from apps.ai.services.llm import describe_api_error, get_client
 from apps.ai.services.prompts import build_system_prompt
 from apps.ai.tools import run_tool, tool_definitions
 
 logger = logging.getLogger(__name__)
 
 MAX_TOOL_RESULT_CHARS = 8000
-
-
-def _error_message(exc):
-    if isinstance(exc, anthropic.AuthenticationError):
-        return "The AI service rejected the API key."
-    if isinstance(exc, anthropic.RateLimitError):
-        return "The AI service is rate limiting requests. Try again in a moment."
-    if isinstance(exc, anthropic.APIConnectionError):
-        return "Could not reach the AI service."
-    return "The AI service returned an error."
 
 
 def _assistant_blocks(content):
@@ -56,7 +46,7 @@ def run_chat(messages, board_id=None):
                 final = stream.get_final_message()
         except anthropic.APIError as exc:
             logger.exception("Anthropic call failed")
-            yield {"type": "error", "message": _error_message(exc)}
+            yield {"type": "error", "message": describe_api_error(exc)}
             return
 
         usage["input_tokens"] += final.usage.input_tokens
