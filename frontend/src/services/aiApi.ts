@@ -1,5 +1,5 @@
 import { api } from "./api"
-import type { ChatEvent, ChatTurn, SearchResult } from "@/types"
+import type { ChatEvent, ChatTurn, PlanRun, SearchResult } from "@/types"
 import { createSSEParser } from "@/utils/sse"
 
 export const semanticSearch = (q: string) =>
@@ -37,3 +37,9 @@ export async function streamChat({
     feed(decoder.decode(value, { stream: true }))
   }
 }
+
+export const startPlan = (boardId: string, focus: string) =>
+  api.post<PlanRun>(`/ai/plans/`, { board_id: boardId, focus }).then(r => r.data)
+
+export const getRun = (id: string) =>
+  api.get<PlanRun>(`/ai/runs/${id}/`).then(r => r.data)

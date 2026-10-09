@@ -73,3 +73,35 @@ export type ChatEvent =
   | { type: "confirmation_required"; action: "delete_card"; card_id: string; title: string; board_id: string }
   | { type: "done"; stop_reason: string | null; iterations: number; usage: { input_tokens: number; output_tokens: number } }
   | { type: "error"; message: string }
+
+export type RunStatus = "queued" | "running" | "succeeded" | "failed"
+
+export interface PlanStep {
+  name: string
+  status: "running" | "done" | "failed"
+  detail: string
+}
+
+export interface PlanItem {
+  card_id: string
+  title: string
+  day: string
+  reason: string
+}
+
+export interface PlanResult {
+  board_id: string
+  column_id: string
+  card_id: string
+  created_column: boolean
+  summary: string
+  items: PlanItem[]
+}
+
+export interface PlanRun {
+  id: string
+  status: RunStatus
+  steps: PlanStep[]
+  result: PlanResult | null
+  error_message: string
+}

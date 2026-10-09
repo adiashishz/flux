@@ -1,11 +1,14 @@
 import { useEffect, useRef } from "react"
 import { useMatch } from "react-router-dom"
-import { RotateCcw, Sparkles, X } from "lucide-react"
+import { CalendarDays, RotateCcw, Sparkles, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useUIStore } from "@/store/ui"
 import { useAssistantChat } from "@/hooks/useAssistantChat"
+import { usePlanWeek } from "@/hooks/usePlanWeek"
 import { ChatInput } from "./components/ChatInput"
 import { ChatMessageView } from "./components/ChatMessageView"
+import { PlanRunCard } from "./components/PlanRunCard"
+import { isActive } from "./planState"
 
 const SUGGESTIONS = [
   "What is on this board?",
@@ -20,11 +23,19 @@ export function AIPanel() {
   const workspaceBoard = useMatch("/workspaces/:workspaceId/boards/:id")
   const boardId = (personalBoard ?? workspaceBoard)?.params.id
   const { messages, streaming, send, stop, reset, confirmDelete, cancelDelete } = useAssistantChat(boardId)
+  const plan = usePlanWeek(boardId)
+  const setSelectedCard = useUIStore((s) => s.setSelectedCard)
+  const openEditor = useUIStore((s) => s.openEditor)
   const endRef = useRef<HTMLDivElement>(null)
+
+  function openPlanCard(cardId: string) {
+    setSelectedCard(cardId)
+    openEditor()
+  }
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" })
-  }, [messages])
+  }, [messages, plan.run])
 
   return (
     <aside
@@ -37,10 +48,21 @@ export function AIPanel() {
         <div className="flex items-center gap-2 border-b border-[#E2E8F0] px-4 py-3 shrink-0">
           <Sparkles size={16} className="text-teal-600" />
           <h2 className="text-sm font-semibold text-[#0F172A]">Ask AI</h2>
+          {boardId && (
+            <button
+              onClick={() => plan.start()}
+              disabled={plan.starting || isActive(plan.run)}
+              className="ml-auto flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+              title="Pick the cards that matter and spread them over the week"
+            >
+              <CalendarDays size={14} />
+              Plan my week
+            </button>
+          )}
           <button
             onClick={reset}
             disabled={messages.length === 0}
-            className="ml-auto p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+            className={cn("p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-40", !boardId && "ml-auto")}
             title="New conversation"
           >
             <RotateCcw size={14} />
@@ -78,6 +100,18 @@ export function AIPanel() {
                   onCancelDelete={(confirmation) => cancelDelete(message.id, confirmation)}
                 />
               ))}
+            </div>
+          )}
+          {(plan.run || plan.starting || plan.error) && (
+            <div className="mt-4">
+              <PlanRunCard
+                run={plan.run}
+                starting={plan.starting}
+                error={plan.error}
+                onOpenCard={openPlanCard}
+                onRetry={() => plan.start()}
+                onDismiss={plan.dismiss}
+              />
             </div>
           )}
           <div ref={endRef} />
