@@ -19,8 +19,8 @@ Backend is the single source of truth. Reference patterns from alpha7 at `/home/
 5. **No ViewSets** — each endpoint is a separate `APIView` subclass
 6. **Tailwind v4** — `@tailwindcss/vite` plugin, theme in `src/index.css` `@theme {}` block, NO `tailwind.config.js`
 7. **shadcn/ui** — do not import `@radix-ui` directly in feature code; all primitives via `src/components/ui/`
-8. **Top-down data flow** — only `WorkspaceList`, `BoardList`, `BoardView`, `Sidebar`, and `EditorPanel` fetch data; all other components receive props
-9. **Zustand for UI state only** — `selectedCardId`, `editorPanelOpen`, `sidebarOpen`. All data comes from the API.
+8. **Top-down data flow** — only `WorkspaceList`, `BoardList`, `BoardView`, `Sidebar`, `EditorPanel`, and `SearchDialog` fetch data; all other components receive props
+9. **Zustand for UI state only** — `selectedCardId`, `editorPanelOpen`, `sidebarOpen`, `searchOpen`. All data comes from the API.
 10. **3-layer API pattern** — `services/api.ts` → `services/*Api.ts` → `hooks/queries/use*.ts`. No business logic in hooks or services.
 
 ---
@@ -33,6 +33,9 @@ Backend is the single source of truth. Reference patterns from alpha7 at `/home/
 | Django | 6.0+ |
 | DRF | 3.15+ |
 | psycopg | 3.2+ (binary) |
+| PostgreSQL | 16 with pgvector (`pgvector/pgvector:pg16`) |
+| Celery + Redis | Redis is the broker only (not an app cache) |
+| fastembed | local ONNX embeddings, `BAAI/bge-small-en-v1.5` (384 dims) |
 | Node | 22 |
 | pnpm | 10.32.1 |
 | React | 19.x |
@@ -48,11 +51,11 @@ Backend is the single source of truth. Reference patterns from alpha7 at `/home/
 
 ## Running Locally
 
-### Docker (Postgres)
+### Docker (Postgres + Redis)
 ```bash
-cd ~/coding/flux/docker
-docker compose up -d        # postgres on :5434
-docker compose down         # stop
+cd ~/coding/flux
+make dev                    # postgres (pgvector) on :5434, redis on :6380
+make down                   # stop
 ```
 
 ### Backend
@@ -61,6 +64,9 @@ cd ~/coding/flux/backend
 uv run python manage.py runserver 7000          # API on :7000
 uv run python manage.py makemigrations          # only when models change
 uv run python manage.py migrate                 # only when models change
+uv run python manage.py embed_cards             # backfill card embeddings (first run downloads the model)
+uv run celery -A config worker -l info          # or: make worker (embeds cards after saves)
+uv run pytest                                   # or: make test (needs make dev first)
 ```
 
 ### Frontend
@@ -79,6 +85,10 @@ API docs: http://localhost:7000/api/docs/
 - **DRF auth disabled** — `DEFAULT_AUTHENTICATION_CLASSES: []`, `DEFAULT_PERMISSION_CLASSES: [AllowAny]` in both `base.py` and `development.py`
 - **`django.contrib.auth` in INSTALLED_APPS** — required by DRF even with auth disabled
 - **Settings module:** `DJANGO_SETTINGS_MODULE=config.settings.development` (set in `.env`)
+- **Service layer:** card create, update, and delete live in `CardService` (not in the views), so the HTTP API and the AI tools share one code path
+- **`apps/ai`:** `CardEmbedding` (pgvector, HNSW cosine index), `GET /api/v1/ai/search/?q=`, Celery task `embed_card` queued after commit by a `post_save` signal. Embeddings are skipped when the text hash and model are unchanged. A broker outage is logged and never fails a card save.
+- **Tests:** `uv run pytest` (pytest-django + factory_boy). `AI_EMBEDDINGS_ENABLED` is forced off in `conftest.py`.
+- **Env examples:** `backend/.env.example` and `docker/.env.example`. Copy to `.env` locally.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Flux uses **TanStack Query (React Query)** as its only caching layer — entirely client-side, in-memory. There is no Redis, no server-side cache, and no service worker cache. This is intentional: Flux is a single-user app with no real-time collaboration, so data only changes when *you* change it. The goal is simple: **API calls fire only when something is actually intended to be saved or fetched for the first time.**
+Flux uses **TanStack Query (React Query)** as its only caching layer — entirely client-side, in-memory. There is no server-side application cache and no service worker cache for data. (Redis exists in the stack only as the Celery broker for background embedding jobs; nothing is cached in it.) This is intentional: Flux is a single-user app with no real-time collaboration, so data only changes when *you* change it. The goal is simple: **API calls fire only when something is actually intended to be saved or fetched for the first time.**
 
 ---
 
@@ -158,11 +158,12 @@ dirty check: debouncedContent === savedContent.current?
 
 ## What is NOT cached
 
-- **Search results** — `GET /api/v1/search/?q=` is intentionally not cached. Search is always live.
+- **Title search** — `GET /api/v1/search/?q=` is intentionally not cached. Search is always live.
+- **Semantic search** — `GET /api/v1/ai/search/?q=` results are kept in the TanStack Query cache for 60 seconds per query string (`useSemanticSearch`), then refetched.
 - **Authentication** — auth is disabled in this version of Flux.
 
 ---
 
-## Why not Redis?
+## Why not Redis as a cache?
 
-Redis is a server-side cache that speeds up database queries when the server receives a request. The problem Flux had was the **frontend making HTTP requests it shouldn't make at all** — not that those requests were slow. Redis would have made redundant requests faster, not eliminated them. The right tool was a client-side cache with a `staleTime` that prevents the request from being issued in the first place.
+Redis is used here only as the Celery message broker, not as a cache. Redis as a cache is a server-side cache that speeds up database queries when the server receives a request. The problem Flux had was the **frontend making HTTP requests it shouldn't make at all** — not that those requests were slow. Redis would have made redundant requests faster, not eliminated them. The right tool was a client-side cache with a `staleTime` that prevents the request from being issued in the first place.

@@ -1,6 +1,15 @@
 # Flux — Future Plans
 
-This file tracks features and ideas planned for future development. Nothing here is being built yet.
+This file tracks features and ideas planned for future development. Items marked _(in progress)_ are being built on `feature/ai-assistant`.
+
+---
+
+## AI Assistant _(in progress)_
+
+- **Phase 1 (done):** semantic search over cards with pgvector (`GET /api/v1/ai/search/`), local embeddings, Celery + Redis indexing, first backend tests. The score cutoff `AI_SEARCH_MIN_SCORE` is uncalibrated until the Phase 3 eval.
+- **Phase 2:** tool calling assistant with SSE streaming (create, update, move cards; deletes need confirmation).
+- **Phase 3:** plan-my-week agent and an eval harness (recall@5, MRR, tool-call accuracy).
+- AI endpoints have no per-user scoping until the auth work below lands.
 
 ---
 
