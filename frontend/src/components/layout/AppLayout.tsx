@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom"
 import { ChevronsRight } from "lucide-react"
 import { Sidebar } from "./Sidebar"
 import { EditorPanel } from "@/features/editor/EditorPanel"
+import { SearchDialog } from "@/features/search/SearchDialog"
 import { useUIStore } from "@/store/ui"
 
 export function AppLayout() {
@@ -31,6 +32,7 @@ export function AppLayout() {
         <div className="fixed inset-0 z-10" onClick={closeEditor} />
       )}
       <EditorPanel />
+      <SearchDialog />
     </div>
   )
 }

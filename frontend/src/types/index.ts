@@ -49,3 +49,14 @@ export interface Column {
 export interface BoardDetail extends Board {
   columns: Column[]
 }
+
+export interface SearchResult {
+  id: string
+  title: string
+  content_preview: string
+  column_id: string
+  column_title: string
+  board_id: string
+  board_title: string
+  score: number
+}
