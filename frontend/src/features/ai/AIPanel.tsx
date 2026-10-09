@@ -5,10 +5,12 @@ import { cn } from "@/lib/utils"
 import { useUIStore } from "@/store/ui"
 import { useAssistantChat } from "@/hooks/useAssistantChat"
 import { usePlanWeek } from "@/hooks/usePlanWeek"
+import { useAiStatus } from "@/hooks/queries/useAiStatus"
 import { ChatInput } from "./components/ChatInput"
 import { ChatMessageView } from "./components/ChatMessageView"
 import { PlanRunCard } from "./components/PlanRunCard"
 import { isActive } from "./planState"
+import { isReady, modelLabel, statusProblem } from "./statusLabel"
 
 const SUGGESTIONS = [
   "What is on this board?",
@@ -23,6 +25,9 @@ export function AIPanel() {
   const workspaceBoard = useMatch("/workspaces/:workspaceId/boards/:id")
   const boardId = (personalBoard ?? workspaceBoard)?.params.id
   const { messages, streaming, send, stop, reset, confirmDelete, cancelDelete } = useAssistantChat(boardId)
+  const { data: status } = useAiStatus(open)
+  const ready = isReady(status)
+  const problem = statusProblem(status)
   const plan = usePlanWeek(boardId)
   const setSelectedCard = useUIStore((s) => s.setSelectedCard)
   const openEditor = useUIStore((s) => s.openEditor)
@@ -51,7 +56,7 @@ export function AIPanel() {
           {boardId && (
             <button
               onClick={() => plan.start()}
-              disabled={plan.starting || isActive(plan.run)}
+              disabled={!ready || plan.starting || isActive(plan.run)}
               className="ml-auto flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-40"
               title="Pick the cards that matter and spread them over the week"
             >
@@ -84,7 +89,8 @@ export function AIPanel() {
                 <button
                   key={suggestion}
                   onClick={() => send(suggestion)}
-                  className="rounded-lg border border-[#E2E8F0] px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50"
+                  disabled={!ready}
+                  className="rounded-lg border border-[#E2E8F0] px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50"
                 >
                   {suggestion}
                 </button>
@@ -117,7 +123,17 @@ export function AIPanel() {
           <div ref={endRef} />
         </div>
 
-        <ChatInput streaming={streaming} onSend={send} onStop={stop} />
+        {problem && (
+          <p className="mx-3 mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            {problem} See docs/ai-assistant.md.
+          </p>
+        )}
+        <ChatInput streaming={streaming} disabled={!ready} onSend={send} onStop={stop} />
+        {modelLabel(status) && (
+          <p className="px-4 pb-2 text-[11px] text-slate-400" title="Set with AI_PROVIDER and AI_MODEL on the server">
+            Model: {modelLabel(status)}
+          </p>
+        )}
       </div>
     </aside>
   )

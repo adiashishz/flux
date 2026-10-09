@@ -1,5 +1,5 @@
 import { api } from "./api"
-import type { ChatEvent, ChatTurn, PlanRun, SearchResult } from "@/types"
+import type { AiStatus, ChatEvent, ChatTurn, PlanRun, SearchResult } from "@/types"
 import { createSSEParser } from "@/utils/sse"
 
 export const semanticSearch = (q: string) =>
@@ -43,3 +43,6 @@ export const startPlan = (boardId: string, focus: string) =>
 
 export const getRun = (id: string) =>
   api.get<PlanRun>(`/ai/runs/${id}/`).then(r => r.data)
+
+export const getStatus = () =>
+  api.get<AiStatus>(`/ai/status/`).then(r => r.data)

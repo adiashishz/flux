@@ -105,3 +105,11 @@ export interface PlanRun {
   result: PlanResult | null
   error_message: string
 }
+
+export interface AiStatus {
+  enabled: boolean
+  configured: boolean
+  provider: string
+  model: string
+  problem: string | null
+}

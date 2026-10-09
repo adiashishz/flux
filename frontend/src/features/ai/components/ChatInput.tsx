@@ -5,15 +5,16 @@ import { Textarea } from "@/components/ui/textarea"
 
 interface ChatInputProps {
   streaming: boolean
+  disabled?: boolean
   onSend: (text: string) => void
   onStop: () => void
 }
 
-export function ChatInput({ streaming, onSend, onStop }: ChatInputProps) {
+export function ChatInput({ streaming, disabled = false, onSend, onStop }: ChatInputProps) {
   const [value, setValue] = useState("")
 
   function submit() {
-    if (!value.trim() || streaming) return
+    if (!value.trim() || streaming || disabled) return
     onSend(value)
     setValue("")
   }
@@ -31,7 +32,8 @@ export function ChatInput({ streaming, onSend, onStop }: ChatInputProps) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Ask me to find, create, or move cards..."
+        disabled={disabled}
+        placeholder={disabled ? "The assistant is not set up yet" : "Ask me to find, create, or move cards..."}
         className="max-h-32 min-h-10 resize-none"
       />
       {streaming ? (
@@ -39,7 +41,7 @@ export function ChatInput({ streaming, onSend, onStop }: ChatInputProps) {
           <Square size={14} />
         </Button>
       ) : (
-        <Button size="icon" onClick={submit} disabled={!value.trim()} title="Send">
+        <Button size="icon" onClick={submit} disabled={!value.trim() || disabled} title="Send">
           <Send size={14} />
         </Button>
       )}
