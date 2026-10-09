@@ -19,8 +19,8 @@ Backend is the single source of truth. Reference patterns from alpha7 at `/home/
 5. **No ViewSets** — each endpoint is a separate `APIView` subclass
 6. **Tailwind v4** — `@tailwindcss/vite` plugin, theme in `src/index.css` `@theme {}` block, NO `tailwind.config.js`
 7. **shadcn/ui** — do not import `@radix-ui` directly in feature code; all primitives via `src/components/ui/`
-8. **Top-down data flow** — only `WorkspaceList`, `BoardList`, `BoardView`, `Sidebar`, `EditorPanel`, and `SearchDialog` fetch data; all other components receive props
-9. **Zustand for UI state only** — `selectedCardId`, `editorPanelOpen`, `sidebarOpen`, `searchOpen`. All data comes from the API.
+8. **Top-down data flow** — only `WorkspaceList`, `BoardList`, `BoardView`, `Sidebar`, `EditorPanel`, `SearchDialog`, and `AIPanel` fetch data; all other components receive props
+9. **Zustand for UI state only** — `selectedCardId`, `editorPanelOpen`, `sidebarOpen`, `searchOpen`, `aiPanelOpen`, `isDragging`. All data comes from the API.
 10. **3-layer API pattern** — `services/api.ts` → `services/*Api.ts` → `hooks/queries/use*.ts`. No business logic in hooks or services.
 
 ---
@@ -87,7 +87,8 @@ API docs: http://localhost:7000/api/docs/
 - **Settings module:** `DJANGO_SETTINGS_MODULE=config.settings.development` (set in `.env`)
 - **Service layer:** card create, update, and delete live in `CardService` (not in the views), so the HTTP API and the AI tools share one code path
 - **`apps/ai`:** `CardEmbedding` (pgvector, HNSW cosine index), `GET /api/v1/ai/search/?q=`, Celery task `embed_card` queued after commit by a `post_save` signal. Embeddings are skipped when the text hash and model are unchanged. A broker outage is logged and never fails a card save.
-- **Tests:** `uv run pytest` (pytest-django + factory_boy). `AI_EMBEDDINGS_ENABLED` is forced off in `conftest.py`.
+- **Assistant:** `POST /api/v1/ai/chat/` streams SSE from a tool-use loop (`apps/ai/services/chat.py`, tools in `apps/ai/tools.py`). Off unless `AI_ENABLED=true` and `ANTHROPIC_API_KEY` are set. See `docs/ai-assistant.md`.
+- **Tests:** `uv run pytest` (pytest-django + factory_boy). `AI_EMBEDDINGS_ENABLED` is forced off in `conftest.py`. Frontend: `pnpm test` (vitest) for the SSE parser and chat reducer.
 - **Env examples:** `backend/.env.example` and `docker/.env.example`. Copy to `.env` locally.
 
 ---
