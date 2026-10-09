@@ -6,7 +6,9 @@ from apps.ai.services import chat
 from apps.workspace.models import Card
 from apps.workspace.tests.factories import CardFactory, ColumnFactory
 
-from .fakes import FakeClient, final_message, text_block, tool_use_block
+from apps.ai.services.providers.base import LLMError
+
+from .fakes import FakeProvider, final_message, text_block, tool_use_block
 
 pytestmark = pytest.mark.django_db
 
@@ -14,9 +16,9 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def script(monkeypatch):
     def install(*finals):
-        client = FakeClient(*finals)
-        monkeypatch.setattr(chat, "get_client", lambda: client)
-        return client
+        provider = FakeProvider(*finals)
+        monkeypatch.setattr(chat, "get_provider", lambda: provider)
+        return provider
 
     return install
 
@@ -111,23 +113,31 @@ def test_the_loop_stops_at_the_iteration_cap(script, settings):
     assert Card.objects.count() == 3
 
 
-def test_api_failures_become_a_clean_error_event(monkeypatch):
-    import anthropic
-    import httpx
-
-    class Exploding:
-        messages = None
-
-        def __init__(self):
-            self.messages = self
-
-        def stream(self, **kwargs):
-            raise anthropic.APIConnectionError(request=httpx.Request("POST", "https://api.anthropic.com"))
-
-    monkeypatch.setattr(chat, "get_client", lambda: Exploding())
+def test_model_failures_become_a_clean_error_event(script):
+    script(LLMError("Could not reach the AI service."))
     events = run()
     assert kinds(events) == ["error"]
     assert events[0]["message"] == "Could not reach the AI service."
+
+
+def test_a_misconfigured_provider_is_an_error_event_not_a_crash(monkeypatch):
+    def broken():
+        raise LLMError("Set AI_MODEL to a model your 'gemini' account can use.")
+
+    monkeypatch.setattr(chat, "get_provider", broken)
+    events = run()
+    assert kinds(events) == ["error"] and "AI_MODEL" in events[0]["message"]
+
+
+def test_arguments_the_provider_could_not_parse_go_back_to_the_model_as_an_error(script):
+    from apps.ai.services.providers.base import ToolCall, TurnResult
+
+    broken = TurnResult(tool_calls=[ToolCall("t1", "create_card", {}, error="Arguments were not valid JSON.")], stop_reason="tool_use")
+    client = script(broken, final_message(text_block("Sorry, retrying.")))
+    events = run()
+    assert [e["ok"] for e in events if e["type"] == "tool_result"] == [False]
+    result = client.calls[1]["messages"][-1]["content"][0]
+    assert result["is_error"] is True and "not valid JSON" in result["content"]
 
 
 def test_the_system_prompt_mentions_the_current_board(script):
@@ -138,10 +148,7 @@ def test_the_system_prompt_mentions_the_current_board(script):
     assert str(column.board_id) in client.calls[0]["system"]
 
 
-def test_requests_use_the_configured_model_and_tools(script, settings):
-    settings.ANTHROPIC_MODEL = "test-model"
+def test_requests_offer_the_tools(script):
     client = script(final_message(text_block("ok")))
     run()
-    call = client.calls[0]
-    assert call["model"] == "test-model"
-    assert {tool["name"] for tool in call["tools"]} >= {"create_card", "move_card", "delete_card"}
+    assert {tool["name"] for tool in client.calls[0]["tools"]} >= {"create_card", "move_card", "delete_card"}

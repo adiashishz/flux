@@ -1,11 +1,11 @@
 import json
 import logging
 
-import anthropic
 from django.conf import settings
 
-from apps.ai.services.llm import describe_api_error, get_client
 from apps.ai.services.prompts import build_system_prompt
+from apps.ai.services.providers import get_provider
+from apps.ai.services.providers.base import LLMError, assistant_blocks
 from apps.ai.tools import run_tool, tool_definitions
 
 logger = logging.getLogger(__name__)
@@ -13,56 +13,48 @@ logger = logging.getLogger(__name__)
 MAX_TOOL_RESULT_CHARS = 8000
 
 
-def _assistant_blocks(content):
-    blocks = []
-    for block in content:
-        if block.type == "text" and block.text:
-            blocks.append({"type": "text", "text": block.text})
-        elif block.type == "tool_use":
-            blocks.append({"type": "tool_use", "id": block.id, "name": block.name, "input": block.input})
-    return blocks
-
-
 def run_chat(messages, board_id=None):
     """Tool use loop. Yields event dicts: text, tool_call, tool_result, confirmation_required,
     done, error. The conversation is stateless: the client sends the text turns every time."""
-    client = get_client()
+    try:
+        provider = get_provider()
+    except LLMError as exc:
+        yield {"type": "error", "message": str(exc)}
+        return
+
     system = build_system_prompt(board_id)
     conversation = [{"role": m["role"], "content": m["content"]} for m in messages]
     usage = {"input_tokens": 0, "output_tokens": 0}
 
     for iteration in range(1, settings.AI_MAX_ITERATIONS + 1):
+        turn = None
         try:
-            with client.messages.stream(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=settings.AI_MAX_TOKENS,
-                system=system,
-                tools=tool_definitions(),
-                messages=conversation,
-            ) as stream:
-                for event in stream:
-                    if event.type == "text":
-                        yield {"type": "text", "text": event.text}
-                final = stream.get_final_message()
-        except anthropic.APIError as exc:
-            logger.exception("Anthropic call failed")
-            yield {"type": "error", "message": describe_api_error(exc)}
+            for kind, payload in provider.stream_turn(system=system, messages=conversation, tools=tool_definitions()):
+                if kind == "text":
+                    yield {"type": "text", "text": payload}
+                else:
+                    turn = payload
+        except LLMError as exc:
+            logger.warning("Model call failed: %s (%s)", exc, exc.__cause__)
+            yield {"type": "error", "message": str(exc)}
             return
 
-        usage["input_tokens"] += final.usage.input_tokens
-        usage["output_tokens"] += final.usage.output_tokens
-        tool_uses = [block for block in final.content if block.type == "tool_use"]
+        usage["input_tokens"] += turn.usage["input_tokens"]
+        usage["output_tokens"] += turn.usage["output_tokens"]
 
-        if final.stop_reason != "tool_use" or not tool_uses:
-            yield {"type": "done", "stop_reason": final.stop_reason, "iterations": iteration, "usage": usage}
+        if turn.stop_reason != "tool_use" or not turn.tool_calls:
+            yield {"type": "done", "stop_reason": turn.stop_reason, "iterations": iteration, "usage": usage}
             return
 
-        conversation.append({"role": "assistant", "content": _assistant_blocks(final.content)})
+        conversation.append({"role": "assistant", "content": assistant_blocks(turn)})
         results = []
-        for use in tool_uses:
-            yield {"type": "tool_call", "id": use.id, "name": use.name, "input": use.input}
-            ok, data = run_tool(use.name, use.input)
-            yield {"type": "tool_result", "id": use.id, "name": use.name, "ok": ok, "result": data}
+        for call in turn.tool_calls:
+            yield {"type": "tool_call", "id": call.id, "name": call.name, "input": call.arguments}
+            if call.error:
+                ok, data = False, {"error": call.error}
+            else:
+                ok, data = run_tool(call.name, call.arguments)
+            yield {"type": "tool_result", "id": call.id, "name": call.name, "ok": ok, "result": data}
             if ok and data.get("requires_confirmation"):
                 yield {
                     "type": "confirmation_required",
@@ -74,7 +66,7 @@ def run_chat(messages, board_id=None):
             results.append(
                 {
                     "type": "tool_result",
-                    "tool_use_id": use.id,
+                    "tool_use_id": call.id,
                     "content": json.dumps(data)[:MAX_TOOL_RESULT_CHARS],
                     "is_error": not ok,
                 }

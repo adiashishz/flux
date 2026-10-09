@@ -6,7 +6,7 @@ from rest_framework.test import APIClient
 
 from apps.ai.services import chat
 
-from .fakes import FakeClient, final_message, text_block
+from .fakes import FakeProvider, final_message, text_block
 
 pytestmark = pytest.mark.django_db
 
@@ -17,9 +17,9 @@ BODY = {"messages": [{"role": "user", "content": "hello"}]}
 @pytest.fixture(autouse=True)
 def enabled(settings, monkeypatch):
     settings.AI_ENABLED = True
-    settings.ANTHROPIC_API_KEY = "test-key"
+    settings.AI_PROVIDER_KEYS = {"anthropic": "test-key"}
     cache.clear()
-    monkeypatch.setattr(chat, "get_client", lambda: FakeClient(final_message(text_block("Hi!"))))
+    monkeypatch.setattr(chat, "get_provider", lambda: FakeProvider(final_message(text_block("Hi!"))))
 
 
 def parse_sse(response):
@@ -45,7 +45,7 @@ def test_streams_server_sent_events():
 @pytest.mark.parametrize("flag,key", [(False, "k"), (True, "")])
 def test_disabled_or_unkeyed_returns_503(settings, flag, key):
     settings.AI_ENABLED = flag
-    settings.ANTHROPIC_API_KEY = key
+    settings.AI_PROVIDER_KEYS = {"anthropic": key}
     assert APIClient().post(URL, BODY, format="json").status_code == 503
 
 

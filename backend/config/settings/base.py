@@ -111,7 +111,19 @@ CELERY_TASK_IGNORE_RESULT = True
 # AI features
 AI_EMBEDDINGS_ENABLED = config("AI_EMBEDDINGS_ENABLED", default=True, cast=bool)
 AI_ENABLED = config("AI_ENABLED", default=False, cast=bool)
-ANTHROPIC_API_KEY = config("ANTHROPIC_API_KEY", default="")
+# Model vendor: anthropic (default), gemini, groq, openrouter, mistral, ollama, openai_compatible
+AI_PROVIDER = config("AI_PROVIDER", default="anthropic")
+AI_MODEL = config("AI_MODEL", default="")
+AI_API_KEY = config("AI_API_KEY", default="")
+AI_BASE_URL = config("AI_BASE_URL", default="")
+AI_STREAM_USAGE = config("AI_STREAM_USAGE", default=False, cast=bool)
+AI_PROVIDER_KEYS = {
+    "anthropic": config("ANTHROPIC_API_KEY", default=""),
+    "gemini": config("GEMINI_API_KEY", default=""),
+    "groq": config("GROQ_API_KEY", default=""),
+    "openrouter": config("OPENROUTER_API_KEY", default=""),
+    "mistral": config("MISTRAL_API_KEY", default=""),
+}
 ANTHROPIC_MODEL = config("ANTHROPIC_MODEL", default="claude-sonnet-5-5")
 AI_MAX_TOKENS = config("AI_MAX_TOKENS", default=2048, cast=int)
 AI_MAX_ITERATIONS = config("AI_MAX_ITERATIONS", default=6, cast=int)

@@ -1,4 +1,7 @@
+import copy
 from types import SimpleNamespace
+
+from apps.ai.services.providers.base import LLMError, Provider, ToolCall, TurnResult
 
 
 def text_block(text):
@@ -49,3 +52,38 @@ class FakeClient:
     def stream(self, **kwargs):
         self.calls.append(kwargs)
         return FakeStream(self.finals.pop(0))
+
+
+STOP = {"tool_use": "tool_use", "end_turn": "end_turn", "max_tokens": "max_tokens"}
+
+
+def turn_from_message(message):
+    """Converts an Anthropic shaped final_message(...) into the vendor neutral TurnResult."""
+    return TurnResult(
+        text="".join(b.text for b in message.content if b.type == "text"),
+        tool_calls=[ToolCall(b.id, b.name, b.input) for b in message.content if b.type == "tool_use"],
+        stop_reason=STOP.get(message.stop_reason, "end_turn"),
+        usage={"input_tokens": message.usage.input_tokens, "output_tokens": message.usage.output_tokens},
+    )
+
+
+class FakeProvider(Provider):
+    """Scripted provider: one answer per model call. Records every request (copied at call time).
+    Pass an exception instance in place of an answer to make that call fail."""
+
+    name = "fake"
+    model = "fake-model"
+
+    def __init__(self, *answers):
+        self.answers = list(answers)
+        self.calls = []
+
+    def stream_turn(self, *, system, messages, tools):
+        self.calls.append({"system": system, "messages": copy.deepcopy(messages), "tools": tools})
+        answer = self.answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        turn = answer if isinstance(answer, TurnResult) else turn_from_message(answer)
+        if turn.text:
+            yield ("text", turn.text)
+        yield ("turn", turn)

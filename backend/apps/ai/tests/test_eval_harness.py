@@ -83,8 +83,9 @@ def test_the_command_fails_when_a_threshold_is_missed():
 
 
 def test_live_mode_needs_a_key(settings):
-    settings.ANTHROPIC_API_KEY = ""
-    with pytest.raises(CommandError, match="ANTHROPIC_API_KEY"):
+    settings.AI_PROVIDER_KEYS = {}
+    settings.AI_API_KEY = ""
+    with pytest.raises(CommandError, match="configured model provider"):
         call_command("run_evals", live=True)
 
 

@@ -9,6 +9,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.ai.models import AssistantRun
+from apps.ai.services.providers import is_ready
 from apps.ai.tasks import run_plan_week
 from apps.workspace.models import Board
 
@@ -40,7 +41,7 @@ class PlanCreateView(APIView):
     throttle_scope = "ai"
 
     def post(self, request):
-        if not (settings.AI_ENABLED and settings.ANTHROPIC_API_KEY):
+        if not is_ready():
             return Response({"detail": "The AI assistant is not enabled."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         serializer = PlanRequestSerializer(data=request.data)

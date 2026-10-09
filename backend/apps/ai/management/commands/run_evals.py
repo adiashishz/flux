@@ -7,6 +7,7 @@ from django.db import transaction
 from apps.ai.evals.retrieval import run_retrieval
 from apps.ai.evals.tools import run_tools
 from apps.ai.evals.world import build_world, load_dataset
+from apps.ai.services.providers import provider_status
 
 
 class Command(BaseCommand):
@@ -24,8 +25,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         live = options["live"]
-        if live and not settings.ANTHROPIC_API_KEY:
-            raise CommandError("--live needs ANTHROPIC_API_KEY.")
+        if live:
+            problem = provider_status()["problem"]
+            if problem:
+                raise CommandError(f"--live needs a configured model provider: {problem}")
 
         report = {}
         with transaction.atomic():

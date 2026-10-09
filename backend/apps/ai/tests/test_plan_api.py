@@ -16,7 +16,7 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture(autouse=True)
 def enabled(settings):
     settings.AI_ENABLED = True
-    settings.ANTHROPIC_API_KEY = "test-key"
+    settings.AI_PROVIDER_KEYS = {"anthropic": "test-key"}
     cache.clear()
 
 
@@ -53,7 +53,7 @@ def test_invalid_requests_are_400(body, enqueued):
 
 @pytest.mark.parametrize("flag,key", [(False, "k"), (True, "")])
 def test_disabled_or_unkeyed_is_503(settings, enqueued, flag, key):
-    settings.AI_ENABLED, settings.ANTHROPIC_API_KEY = flag, key
+    settings.AI_ENABLED, settings.AI_PROVIDER_KEYS = flag, {"anthropic": key}
     assert post({"board_id": str(BoardFactory().id)}).status_code == 503
 
 

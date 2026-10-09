@@ -5,7 +5,9 @@ from apps.ai.evals.world import build_world, load_dataset
 from apps.ai.services import chat
 from apps.workspace.models import Card
 
-from .fakes import FakeClient, final_message, text_block, tool_use_block
+from apps.ai.services.providers.base import LLMError
+
+from .fakes import FakeProvider, final_message, text_block, tool_use_block
 
 pytestmark = pytest.mark.django_db
 
@@ -18,9 +20,9 @@ def world():
 @pytest.fixture
 def play(monkeypatch):
     def install(*finals):
-        client = FakeClient(*finals)
-        monkeypatch.setattr(chat, "get_client", lambda: client)
-        return client
+        provider = FakeProvider(*finals)
+        monkeypatch.setattr(chat, "get_provider", lambda: provider)
+        return provider
 
     return install
 
@@ -118,18 +120,8 @@ def test_creating_two_cards_needs_both(world, play):
     assert run_case(world, case("create-two"))["passed"]
 
 
-def test_a_model_error_fails_the_case(world, play, monkeypatch):
-    import anthropic
-    import httpx
-
-    class Down:
-        def __init__(self):
-            self.messages = self
-
-        def stream(self, **kwargs):
-            raise anthropic.APIConnectionError(request=httpx.Request("POST", "https://api.anthropic.com"))
-
-    monkeypatch.setattr(chat, "get_client", lambda: Down())
+def test_a_model_error_fails_the_case(world, play):
+    play(LLMError("Could not reach the AI service."))
     result = run_case(world, case("create-basic"))
     assert not result["passed"] and "model error" in result["failures"][-1]
 
