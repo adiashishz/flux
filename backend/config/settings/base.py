@@ -93,6 +93,7 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 25,
     "MAX_PAGE_SIZE": 100,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_RATES": {"ai": config("AI_RATE_LIMIT", default="20/min")},
 }
 
 SPECTACULAR_SETTINGS = {
@@ -112,6 +113,8 @@ AI_EMBEDDINGS_ENABLED = config("AI_EMBEDDINGS_ENABLED", default=True, cast=bool)
 AI_ENABLED = config("AI_ENABLED", default=False, cast=bool)
 ANTHROPIC_API_KEY = config("ANTHROPIC_API_KEY", default="")
 ANTHROPIC_MODEL = config("ANTHROPIC_MODEL", default="claude-sonnet-5-5")
+AI_MAX_TOKENS = config("AI_MAX_TOKENS", default=2048, cast=int)
+AI_MAX_ITERATIONS = config("AI_MAX_ITERATIONS", default=6, cast=int)
 EMBEDDING_MODEL = config("EMBEDDING_MODEL", default="BAAI/bge-small-en-v1.5")
 EMBEDDING_DIMENSIONS = 384
 EMBEDDING_CACHE_DIR = config("EMBEDDING_CACHE_DIR", default="") or None
