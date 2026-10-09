@@ -1,6 +1,6 @@
 COMPOSE = docker compose -f docker/docker-compose.yml --env-file docker/.env
 
-.PHONY: up down dev backend-start logs shell makemigrations migrate
+.PHONY: up down dev backend-start worker test logs shell makemigrations migrate
 
 ## Start everything (builds if needed, migrations run automatically)
 up:
@@ -10,9 +10,17 @@ up:
 down:
 	$(COMPOSE) down
 
-## Dev mode — start only the database
+## Dev mode — start only the database and Redis
 dev:
-	$(COMPOSE) up -d db
+	$(COMPOSE) up -d db redis
+
+## Start the Celery worker locally (requires make dev first)
+worker:
+	cd backend && uv run celery -A config worker --loglevel=info --concurrency=2
+
+## Run the backend test suite (requires make dev first)
+test:
+	cd backend && uv run pytest
 
 ## Start backend dev server (requires make dev first)
 backend-start:
