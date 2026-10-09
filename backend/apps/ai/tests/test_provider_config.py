@@ -1,7 +1,7 @@
 import pytest
 
 from apps.ai.services import providers
-from apps.ai.services.providers import get_provider, is_ready, provider_status, resolve
+from apps.ai.services.providers import get_provider, is_ready, provider_status, resolve, use_provider
 from apps.ai.services.providers.anthropic_provider import AnthropicProvider
 from apps.ai.services.providers.base import LLMError
 
@@ -121,3 +121,40 @@ def test_get_provider_builds_the_anthropic_adapter(settings):
 def test_get_provider_raises_the_problem_as_an_llm_error():
     with pytest.raises(LLMError, match="No API key"):
         get_provider()
+
+
+def test_use_provider_switches_the_default_inside_the_block_only(settings):
+    settings.AI_PROVIDER = "anthropic"
+    settings.AI_PROVIDER_KEYS = {"anthropic": "a", "gemini": "g"}
+    with use_provider("gemini", "gem-model"):
+        provider = get_provider()
+        assert (provider.name, provider.model) == ("gemini", "gem-model")
+    assert get_provider().name == "anthropic"
+
+
+def test_use_provider_never_lends_the_generic_key_to_another_vendor(settings):
+    settings.AI_PROVIDER = "groq"
+    settings.AI_API_KEY = "groq-only-key"
+    settings.AI_MODEL = "groq-model"
+    with use_provider("gemini", "gem-model"):
+        with pytest.raises(LLMError, match="No API key for 'gemini'"):
+            get_provider()
+
+
+def test_use_provider_can_override_just_the_model(settings):
+    settings.AI_PROVIDER = "groq"
+    settings.AI_API_KEY = "k"
+    settings.AI_MODEL = "default-model"
+    with use_provider(None, "other-model"):
+        assert get_provider().model == "other-model"
+
+
+def test_get_provider_builds_the_openai_adapter_for_compatible_vendors(settings):
+    from apps.ai.services.providers.openai_compat import OpenAICompatProvider
+
+    settings.AI_PROVIDER = "gemini"
+    settings.AI_API_KEY = "k"
+    settings.AI_MODEL = "m"
+    provider = get_provider()
+    assert isinstance(provider, OpenAICompatProvider)
+    assert (provider.name, provider.model, provider.base_url) == ("gemini", "m", "https://generativelanguage.googleapis.com/v1beta/openai/")

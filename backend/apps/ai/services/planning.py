@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 PLAN_COLUMN_TITLE = "This Week"
 DONE_COLUMN_TITLES = {"done", "completed", "complete", "shipped", "archive", "archived"}
 MAX_ITEMS = 15
-DESCRIPTION_CHARS = 200
+DESCRIPTION_CHARS = 120
 Day = Literal["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 SYSTEM_PROMPT = """You plan the user's week from the open cards on one kanban board.

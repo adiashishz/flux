@@ -93,3 +93,30 @@ def test_results_can_be_written_as_json(tmp_path):
     out = tmp_path / "report.json"
     call_command("run_evals", min_recall=0.0, min_mrr=0.0, json_path=str(out))
     assert '"recall_at_5"' in out.read_text()
+
+
+def test_live_mode_reports_what_is_wrong_with_the_chosen_provider(settings):
+    settings.AI_PROVIDER_KEYS = {}
+    settings.AI_API_KEY = ""
+    with pytest.raises(CommandError, match="No API key for 'gemini'"):
+        call_command("run_evals", live=True, provider="gemini", model="m")
+
+
+def test_live_mode_records_the_provider_and_model_in_the_report(settings, monkeypatch, capsys, tmp_path):
+    from apps.ai.management.commands import run_evals
+
+    settings.AI_PROVIDER_KEYS = {"groq": "k"}
+    seen = {}
+
+    def fake_run_tools(world, dataset):
+        from apps.ai.services.providers import get_provider
+
+        seen["provider"] = (get_provider().name, get_provider().model)
+        return {"cases": 1, "passed": 1, "accuracy": 1.0, "total_tokens": 0, "results": []}
+
+    monkeypatch.setattr(run_evals, "run_tools", fake_run_tools)
+    out = tmp_path / "r.json"
+    call_command("run_evals", live=True, provider="groq", model="grq-model", min_recall=0.0, min_mrr=0.0, json_path=str(out))
+    assert seen["provider"] == ("groq", "grq-model")
+    assert "Provider: groq / grq-model" in capsys.readouterr().out
+    assert '"model": "grq-model"' in out.read_text()

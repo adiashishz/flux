@@ -1,4 +1,6 @@
 """Model vendors behind one interface. Pick one with AI_PROVIDER; see docs/ai-assistant.md."""
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 
 from django.conf import settings
@@ -62,7 +64,23 @@ def is_ready():
     return status["enabled"] and status["configured"]
 
 
+_override = ContextVar("provider_override", default=None)
+
+
+@contextmanager
+def use_provider(name=None, model=None):
+    """Make get_provider() default to this vendor and model inside the block (used by the evals
+    to compare models). Generic keys are never applied to a vendor other than AI_PROVIDER."""
+    token = _override.set((name, model))
+    try:
+        yield
+    finally:
+        _override.reset(token)
+
+
 def get_provider(name=None, model=None):
+    if name is None and model is None and _override.get():
+        name, model = _override.get()
     config = resolve(name, model)
     if config.problem:
         raise LLMError(config.problem)

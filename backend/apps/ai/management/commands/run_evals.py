@@ -7,7 +7,7 @@ from django.db import transaction
 from apps.ai.evals.retrieval import run_retrieval
 from apps.ai.evals.tools import run_tools
 from apps.ai.evals.world import build_world, load_dataset
-from apps.ai.services.providers import provider_status
+from apps.ai.services.providers import provider_status, use_provider
 
 
 class Command(BaseCommand):
@@ -18,6 +18,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--live", action="store_true", help="Also run the tool calling cases against the real Anthropic API.")
+        parser.add_argument("--provider", help="Model vendor for --live (default: AI_PROVIDER). Use it to compare vendors.")
+        parser.add_argument("--model", help="Model name for --live (default: AI_MODEL).")
         parser.add_argument("--min-recall", type=float, default=0.85, help="Fail if recall@5 is below this.")
         parser.add_argument("--min-mrr", type=float, default=0.7, help="Fail if MRR is below this.")
         parser.add_argument("--min-tool-accuracy", type=float, default=0.8, help="Fail (with --live) if tool accuracy is below this.")
@@ -26,7 +28,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         live = options["live"]
         if live:
-            problem = provider_status()["problem"]
+            problem = provider_status(options["provider"], options["model"])["problem"]
             if problem:
                 raise CommandError(f"--live needs a configured model provider: {problem}")
 
@@ -35,7 +37,10 @@ class Command(BaseCommand):
             world = build_world(load_dataset("corpus"))
             report["retrieval"] = run_retrieval(world, load_dataset("retrieval"))
             if live:
-                report["tools"] = run_tools(world, load_dataset("tools"))
+                status = provider_status(options["provider"], options["model"])
+                report["provider"] = {"name": status["provider"], "model": status["model"]}
+                with use_provider(options["provider"], options["model"]):
+                    report["tools"] = run_tools(world, load_dataset("tools"))
             transaction.set_rollback(True)
 
         self._print(report, live)
@@ -75,6 +80,7 @@ class Command(BaseCommand):
             out("Tool calling: skipped (add --live to run it against the Anthropic API).")
             return
         t = report["tools"]
+        out(f"Provider: {report['provider']['name']} / {report['provider']['model']}")
         out(f"Tool calling ({t['cases']} cases): {t['passed']}/{t['cases']} passed, accuracy {t['accuracy']:.2f}, {t['total_tokens']} tokens")
         for result in t["results"]:
             mark = "ok  " if result["passed"] else "FAIL"
