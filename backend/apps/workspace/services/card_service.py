@@ -6,6 +6,53 @@ from apps.workspace.models import Card, Column
 class CardService:
     POSITION_STEP = 1000
     REBALANCE_THRESHOLD = 10
+    PREVIEW_LENGTH = 200
+    UPDATABLE_FIELDS = ("title", "description", "content_markdown", "position")
+
+    @staticmethod
+    @transaction.atomic
+    def create_card(column_id, title, description=""):
+        try:
+            column = Column.objects.select_for_update().get(id=column_id)
+        except Column.DoesNotExist:
+            raise ValidationError({"column_id": "Column not found."})
+
+        last = Card.objects.filter(column=column).order_by("position").last()
+        position = (last.position + CardService.POSITION_STEP) if last else CardService.POSITION_STEP
+
+        return Card.objects.create(column=column, title=title, description=description, position=position)
+
+    @staticmethod
+    @transaction.atomic
+    def update_card(card_id, **fields):
+        try:
+            card = Card.objects.select_for_update().get(id=card_id)
+        except Card.DoesNotExist:
+            raise ValidationError({"card_id": "Card not found."})
+
+        unknown = set(fields) - set(CardService.UPDATABLE_FIELDS)
+        if unknown:
+            raise ValidationError({field: "This field cannot be updated." for field in unknown})
+
+        for name, value in fields.items():
+            setattr(card, name, value)
+
+        update_fields = list(fields)
+        if "content_markdown" in fields:
+            card.content_preview = fields["content_markdown"][: CardService.PREVIEW_LENGTH]
+            update_fields.append("content_preview")
+
+        card.save(update_fields=[*update_fields, "updated_at"])
+        return card
+
+    @staticmethod
+    @transaction.atomic
+    def delete_card(card_id):
+        try:
+            card = Card.objects.select_for_update().get(id=card_id)
+        except Card.DoesNotExist:
+            raise ValidationError({"card_id": "Card not found."})
+        card.delete()
 
     @staticmethod
     @transaction.atomic
