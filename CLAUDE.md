@@ -87,7 +87,7 @@ API docs: http://localhost:7000/api/docs/
 - **Settings module:** `DJANGO_SETTINGS_MODULE=config.settings.development` (set in `.env`)
 - **Service layer:** card create, update, and delete live in `CardService` (not in the views), so the HTTP API and the AI tools share one code path
 - **`apps/ai`:** `CardEmbedding` (pgvector, HNSW cosine index), `GET /api/v1/ai/search/?q=`, Celery task `embed_card` queued after commit by a `post_save` signal. Embeddings are skipped when the text hash and model are unchanged. A broker outage is logged and never fails a card save.
-- **Assistant:** `POST /api/v1/ai/chat/` streams SSE from a tool-use loop (`apps/ai/services/chat.py`, tools in `apps/ai/tools.py`). Off unless `AI_ENABLED=true` and `ANTHROPIC_API_KEY` are set. See `docs/ai-assistant.md`.
+- **Assistant:** `POST /api/v1/ai/chat/` streams SSE from a tool-use loop (`apps/ai/services/chat.py`, tools in `apps/ai/tools.py`). Off unless `AI_ENABLED=true` and `ANTHROPIC_API_KEY` are set. Also `POST /api/v1/ai/plans/` (plan my week as a Celery job) and `manage.py run_evals` (`make eval`). See `docs/ai-assistant.md`.
 - **Tests:** `uv run pytest` (pytest-django + factory_boy). `AI_EMBEDDINGS_ENABLED` is forced off in `conftest.py`. Frontend: `pnpm test` (vitest) for the SSE parser and chat reducer.
 - **Env examples:** `backend/.env.example` and `docker/.env.example`. Copy to `.env` locally.
 

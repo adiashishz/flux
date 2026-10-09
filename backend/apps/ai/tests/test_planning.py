@@ -176,3 +176,13 @@ def test_a_model_failure_marks_the_step_failed_and_propagates(board, monkeypatch
 def test_the_candidate_list_is_capped(board, settings):
     settings.AI_PLAN_MAX_CARDS = 1
     assert len(planning.gather_candidates(type(board).objects.prefetch_related("columns__cards").get(id=board.id))) == 1
+
+
+def test_earlier_plans_and_the_plan_column_are_never_planned_again(board, model):
+    week = ColumnFactory(board=board, title="This Week", position=5000)
+    earlier_plan = CardFactory(column=week, title="Week plan, Oct 02")
+    model.queue.append(plan_for((board.cards["invoice"], "Monday", "x")))
+    execute_plan(make_run(board))
+    prompt = model.calls[0]["messages"][0]["content"]
+    assert str(earlier_plan.id) not in prompt
+    assert str(board.cards["invoice"].id) in prompt

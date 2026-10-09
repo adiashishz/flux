@@ -81,10 +81,12 @@ class StepLog:
 
 
 def gather_candidates(board):
-    """Open cards only: cards in a column that looks like done are not planned."""
+    """Open cards only. Done columns are skipped, and so is the plan column itself, so earlier
+    plans (and the cards already placed in it) are never planned again."""
+    skipped = DONE_COLUMN_TITLES | {PLAN_COLUMN_TITLE.lower()}
     candidates = []
     for column in board.columns.all():
-        if column.title.strip().lower() in DONE_COLUMN_TITLES:
+        if column.title.strip().lower() in skipped:
             continue
         for card in column.cards.all():
             candidates.append(
