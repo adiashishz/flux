@@ -121,7 +121,8 @@ EMBEDDING_MODEL = config("EMBEDDING_MODEL", default="BAAI/bge-small-en-v1.5")
 EMBEDDING_DIMENSIONS = 384
 EMBEDDING_CACHE_DIR = config("EMBEDDING_CACHE_DIR", default="") or None
 AI_SEARCH_LIMIT = config("AI_SEARCH_LIMIT", default=10, cast=int)
-AI_SEARCH_MIN_SCORE = config("AI_SEARCH_MIN_SCORE", default=0.3, cast=float)
+# Picked with `manage.py run_evals`: 0.55 keeps recall@5 at 1.00 and halves answers to unrelated queries
+AI_SEARCH_MIN_SCORE = config("AI_SEARCH_MIN_SCORE", default=0.55, cast=float)
 
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",

@@ -1,0 +1,232 @@
+{
+  "boards": [
+    {
+      "key": "work",
+      "title": "Work",
+      "columns": [
+        {
+          "key": "work_todo",
+          "title": "Todo"
+        },
+        {
+          "key": "work_doing",
+          "title": "Doing"
+        },
+        {
+          "key": "work_done",
+          "title": "Done"
+        }
+      ]
+    },
+    {
+      "key": "home",
+      "title": "Home",
+      "columns": [
+        {
+          "key": "home_todo",
+          "title": "Todo"
+        },
+        {
+          "key": "home_done",
+          "title": "Done"
+        }
+      ]
+    },
+    {
+      "key": "learning",
+      "title": "Learning",
+      "columns": [
+        {
+          "key": "learn_reading",
+          "title": "Reading list"
+        },
+        {
+          "key": "learn_progress",
+          "title": "In progress"
+        }
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "key": "w01",
+      "column": "work_todo",
+      "title": "Send overdue invoices to clients",
+      "description": "Three client invoices are 30 days late. Draft reminder emails and attach PDFs."
+    },
+    {
+      "key": "w02",
+      "column": "work_todo",
+      "title": "Fix flaky deploy script",
+      "description": "The release pipeline fails randomly on the migration step. Add retries and logging."
+    },
+    {
+      "key": "w03",
+      "column": "work_doing",
+      "title": "Prepare Q4 roadmap presentation",
+      "description": "Slides for the leadership review covering priorities, staffing and risks."
+    },
+    {
+      "key": "w04",
+      "column": "work_todo",
+      "title": "Review pull request for auth refactor",
+      "description": "Large PR touching login and session handling. Check the token expiry logic."
+    },
+    {
+      "key": "w05",
+      "column": "work_todo",
+      "title": "Write onboarding guide for new hires",
+      "description": "Document laptop setup, repository access and a first week checklist."
+    },
+    {
+      "key": "w06",
+      "column": "work_doing",
+      "title": "Investigate slow dashboard queries",
+      "description": "The dashboard takes 8 seconds to load. Probably a missing index on the events table."
+    },
+    {
+      "key": "w07",
+      "column": "work_todo",
+      "title": "Schedule performance reviews",
+      "description": "Book one on one slots with each team member and collect self assessments."
+    },
+    {
+      "key": "w08",
+      "column": "work_done",
+      "title": "Rotate production API keys",
+      "description": "Keys rotated and stored in the secrets manager."
+    },
+    {
+      "key": "w09",
+      "column": "work_todo",
+      "title": "Renew SSL certificate for staging",
+      "description": "The certificate expires next week. Automate renewal with certbot."
+    },
+    {
+      "key": "w10",
+      "column": "work_todo",
+      "title": "Reply to customer complaint about billing",
+      "description": "A customer was charged twice in March. Confirm the refund with finance."
+    },
+    {
+      "key": "h01",
+      "column": "home_todo",
+      "title": "Book dentist appointment",
+      "description": "Six month checkup is due. Prefer a morning slot."
+    },
+    {
+      "key": "h02",
+      "column": "home_todo",
+      "title": "Fix leaking kitchen tap",
+      "description": "Dripping since last week. Buy a replacement washer or call a plumber."
+    },
+    {
+      "key": "h03",
+      "column": "home_todo",
+      "title": "Buy groceries for the weekend",
+      "description": "Milk, eggs, spinach, pasta and coffee beans."
+    },
+    {
+      "key": "h04",
+      "column": "home_todo",
+      "title": "Renew passport",
+      "description": "Expires in four months. Need photos and the application form."
+    },
+    {
+      "key": "h05",
+      "column": "home_todo",
+      "title": "Plan birthday dinner for mom",
+      "description": "Reserve a table for six around 7pm with vegetarian options."
+    },
+    {
+      "key": "h06",
+      "column": "home_todo",
+      "title": "Declutter the garage",
+      "description": "Donate old furniture, sort tools and throw away paint cans."
+    },
+    {
+      "key": "h07",
+      "column": "home_done",
+      "title": "Pay electricity bill",
+      "description": "Paid online."
+    },
+    {
+      "key": "h08",
+      "column": "home_todo",
+      "title": "Service the car",
+      "description": "Oil change and brake inspection before the road trip."
+    },
+    {
+      "key": "h09",
+      "column": "home_todo",
+      "title": "Book flights for summer vacation",
+      "description": "Compare prices to Lisbon in July and check baggage rules."
+    },
+    {
+      "key": "h10",
+      "column": "home_todo",
+      "title": "Water the balcony plants",
+      "description": "Tomatoes and basil need watering every other day."
+    },
+    {
+      "key": "l01",
+      "column": "learn_reading",
+      "title": "Read Designing Data-Intensive Applications",
+      "description": "Start with the chapters on replication and partitioning."
+    },
+    {
+      "key": "l02",
+      "column": "learn_progress",
+      "title": "Practice SQL window functions",
+      "description": "Work through ranking, running totals and lag and lead exercises."
+    },
+    {
+      "key": "l03",
+      "column": "learn_reading",
+      "title": "Watch talk on distributed consensus",
+      "description": "Raft explained: leader election and log replication."
+    },
+    {
+      "key": "l04",
+      "column": "learn_progress",
+      "title": "Learn Spanish vocabulary",
+      "description": "Fifty new words a week with flashcards."
+    },
+    {
+      "key": "l05",
+      "column": "learn_reading",
+      "title": "Try Rust ownership tutorial",
+      "description": "Borrow checker, lifetimes and small exercises."
+    },
+    {
+      "key": "l06",
+      "column": "learn_progress",
+      "title": "Study for AWS certification",
+      "description": "Focus on networking, IAM and storage services."
+    },
+    {
+      "key": "l07",
+      "column": "learn_reading",
+      "title": "Read paper on transformers",
+      "description": "Attention is all you need. Summarise the architecture."
+    },
+    {
+      "key": "l08",
+      "column": "learn_progress",
+      "title": "Build a personal budget spreadsheet",
+      "description": "Track monthly income, subscriptions and savings goals."
+    },
+    {
+      "key": "l09",
+      "column": "learn_reading",
+      "title": "Explore Kubernetes basics",
+      "description": "Pods, deployments and services. Run a local cluster."
+    },
+    {
+      "key": "l10",
+      "column": "learn_progress",
+      "title": "Improve public speaking",
+      "description": "Record a five minute talk and review pacing and filler words."
+    }
+  ]
+}

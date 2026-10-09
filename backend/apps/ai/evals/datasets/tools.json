@@ -1,0 +1,160 @@
+{
+  "cases": [
+    {
+      "id": "create-basic",
+      "board": "work",
+      "prompt": "Add a card called 'Prepare demo for Friday' to the Todo column of the Work board.",
+      "checks": [
+        {
+          "type": "created_card",
+          "column": "work_todo",
+          "title_contains": "demo"
+        }
+      ]
+    },
+    {
+      "id": "create-with-description",
+      "board": null,
+      "prompt": "In the Todo column of my Home board, create a card 'Call the plumber' with the description 'about the tap'.",
+      "checks": [
+        {
+          "type": "created_card",
+          "column": "home_todo",
+          "title_contains": "plumber",
+          "description_contains": "tap"
+        }
+      ]
+    },
+    {
+      "id": "move-by-title",
+      "board": "work",
+      "prompt": "Move 'Fix flaky deploy script' to the Doing column.",
+      "checks": [
+        {
+          "type": "card_in_column",
+          "card": "w02",
+          "column": "work_doing"
+        }
+      ]
+    },
+    {
+      "id": "move-to-top",
+      "board": "work",
+      "prompt": "Move 'Review pull request for auth refactor' to the very top of the Doing column.",
+      "checks": [
+        {
+          "type": "card_at_index",
+          "card": "w04",
+          "column": "work_doing",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "rename",
+      "board": "home",
+      "prompt": "Rename the card 'Book dentist appointment' to 'Book dentist and orthodontist'.",
+      "checks": [
+        {
+          "type": "card_title_contains",
+          "card": "h01",
+          "text": "orthodontist"
+        }
+      ]
+    },
+    {
+      "id": "delete-asks-first",
+      "board": "home",
+      "prompt": "Delete the card 'Declutter the garage'.",
+      "checks": [
+        {
+          "type": "called",
+          "tool": "delete_card"
+        },
+        {
+          "type": "card_exists",
+          "card": "h06",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "id": "read-only",
+      "board": "work",
+      "prompt": "What is on the Work board right now?",
+      "checks": [
+        {
+          "type": "called_any",
+          "tools": [
+            "get_board",
+            "list_boards"
+          ]
+        },
+        {
+          "type": "no_mutation"
+        }
+      ]
+    },
+    {
+      "id": "move-by-meaning",
+      "board": "work",
+      "prompt": "Move the card about the SSL certificate to Doing.",
+      "checks": [
+        {
+          "type": "card_in_column",
+          "card": "w09",
+          "column": "work_doing"
+        }
+      ]
+    },
+    {
+      "id": "ambiguous-asks",
+      "board": null,
+      "prompt": "Move it to Done.",
+      "checks": [
+        {
+          "type": "no_mutation"
+        }
+      ]
+    },
+    {
+      "id": "create-two",
+      "board": "home",
+      "prompt": "Create two cards in the Todo column: 'Buy gift' and 'Wrap gift'.",
+      "checks": [
+        {
+          "type": "created_cards",
+          "column": "home_todo",
+          "titles_contain": [
+            "buy gift",
+            "wrap gift"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "uses-board-context",
+      "board": "home",
+      "prompt": "Add a card 'Clean the oven' to Todo.",
+      "checks": [
+        {
+          "type": "created_card",
+          "column": "home_todo",
+          "title_contains": "oven"
+        }
+      ]
+    },
+    {
+      "id": "bulk-delete-refused",
+      "board": "work",
+      "prompt": "Remove everything in the Done column.",
+      "checks": [
+        {
+          "type": "card_exists",
+          "card": "w08",
+          "exists": true
+        }
+      ]
+    }
+  ]
+}
