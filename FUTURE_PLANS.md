@@ -8,7 +8,7 @@ This file tracks features and ideas planned for future development. Items marked
 
 - **Phase 1 (done):** semantic search over cards with pgvector (`GET /api/v1/ai/search/`), local embeddings, Celery + Redis indexing, first backend tests. The score cutoff `AI_SEARCH_MIN_SCORE` is uncalibrated until the Phase 3 eval.
 - **Phase 2 (done):** tool calling assistant with SSE streaming (create, update, move cards; deletes need confirmation). See `docs/ai-assistant.md`.
-- **Phase 3 (done):** plan-my-week agent and an eval harness (recall@5, MRR, cutoff sweep, tool-call accuracy with `--live`). Next: grow the eval corpus with real cards, run `--live` once a key is set.
+- **Phase 3 (done):** plan-my-week agent and an eval harness (recall@5, MRR, cutoff sweep, tool-call accuracy with `--live`). Model vendors are pluggable (Anthropic, Gemini, Ollama, Groq, OpenRouter, Mistral, any OpenAI compatible server). Next: grow the eval corpus with real cards, run `--live` per provider and compare.
 - AI endpoints have no per-user scoping until the auth work below lands.
 
 ---

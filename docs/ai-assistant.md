@@ -45,17 +45,54 @@ Measured on 2026-10-09 with `BAAI/bge-small-en-v1.5`: recall@1 0.96, recall@5 1.
 
 Read those numbers with care: the corpus is 30 cards, the queries were written by the same person who wrote the cards, and the cards are clearly different from each other. They show the plumbing and the calibration work, not production accuracy. Grow `datasets/` with real, messier cards to tighten them. The tool calling score has not been measured yet because it needs a live key.
 
+## Model providers
+
+The assistant is not tied to one vendor. `AI_PROVIDER` picks one of:
+
+| Provider | How it connects | Needs |
+|---|---|---|
+| `anthropic` (default) | Anthropic SDK | `ANTHROPIC_API_KEY` (model defaults to `ANTHROPIC_MODEL`) |
+| `gemini` | OpenAI compatible endpoint of Google AI Studio | `GEMINI_API_KEY`, `AI_MODEL` |
+| `groq` | OpenAI compatible | `GROQ_API_KEY`, `AI_MODEL` |
+| `openrouter` | OpenAI compatible (`:free` models exist) | `OPENROUTER_API_KEY`, `AI_MODEL` |
+| `mistral` | OpenAI compatible | `MISTRAL_API_KEY`, `AI_MODEL` |
+| `ollama` | OpenAI compatible, local, no key | `AI_MODEL` (a pulled model that supports tools) |
+| `openai_compatible` | any other server (LM Studio, vLLM, a proxy) | `AI_BASE_URL`, `AI_MODEL` |
+
+- **No default model** for anything except Anthropic, on purpose: free tiers retire and rename models often, and a stale default fails in a confusing way. `AI_MODEL` says which model to call.
+- **Keys:** a vendor key (`GEMINI_API_KEY` ...) always wins. The generic `AI_API_KEY`, `AI_MODEL` and `AI_BASE_URL` only apply to the provider named in `AI_PROVIDER`, so comparing vendors in the evals never sends one vendor's key to another.
+- `GET /api/v1/ai/status/` reports `{enabled, configured, provider, model, problem}` (never a key). The Ask AI panel uses it to show the model in use, or what is missing, instead of failing on the first message.
+- **Architecture:** `apps/ai/services/providers/` has one interface (`stream_turn`, `structured`) and two adapters: `anthropic_provider.py` and `openai_compat.py`. The chat loop, the tools and the planner only see a vendor neutral `TurnResult` and `ToolCall`. To add a vendor with its own protocol, write another adapter. Most vendors only need a preset line in `presets.py`.
+
+### Free providers: what to know
+
+- **Limits and model lists change often.** Check the provider's own limits page before relying on a number. Reported limits at the time of writing (from third party sources, verify them): Groq free about 30 requests and 8,000 tokens per minute per model; OpenRouter `:free` models about 20 requests per minute; Gemini free limits are shown in AI Studio.
+- **Prompt size matters on small token budgets.** The plan prompt is capped at `AI_PLAN_MAX_CARDS` (default 80) cards with 120 character descriptions. The tool definitions are about a thousand tokens.
+- **Gemini free tier:** prompts and responses may be used by Google to improve its products. Do not put private notes through it.
+- **Ollama:** the backend runs in Docker, so Ollama must listen on all interfaces (`OLLAMA_HOST=0.0.0.0 ollama serve`); the containers reach it at `host.docker.internal`. For a backend outside Docker set `AI_BASE_URL=http://localhost:11434/v1`. Small local models often call tools badly; run the evals on the model you pick.
+- **Quirks the adapter already handles:** tool call chunks without an `index`, `stop` as the finish reason when tools were called, missing usage numbers (token counts show 0 unless `AI_STREAM_USAGE=true` works on your provider), malformed tool argument JSON (sent back to the model as an error so it can retry), `json_schema` response format not supported (falls back to JSON mode, tolerates code fences, one repair retry).
+- **Compare models:** `make eval ARGS="--live --provider gemini --model <model>"` and the same for `ollama` print the tool calling accuracy per model.
+
 ## Turning it on
 
-Off by default. Set these in `docker/.env` (or `backend/.env` for local runs) and restart the backend:
+Off by default. Set these in `docker/.env` (or `backend/.env` for local runs) and restart the backend. Copy the blocks from `docker/.env.example`. For example Gemini:
 
 ```
 AI_ENABLED=true
-ANTHROPIC_API_KEY=<your key>
-ANTHROPIC_MODEL=claude-sonnet-5-5   # optional
+AI_PROVIDER=gemini
+AI_MODEL=<a model your AI Studio key can call>
+GEMINI_API_KEY=<your key>
 ```
 
-Without both `AI_ENABLED=true` and a key the endpoint returns `503 {"detail": "The AI assistant is not enabled."}`.
+or a local Ollama (no key):
+
+```
+AI_ENABLED=true
+AI_PROVIDER=ollama
+AI_MODEL=<a pulled model that supports tools>
+```
+
+Unless `AI_ENABLED=true` and the provider is fully configured, the chat and plan endpoints return `503 {"detail": "The AI assistant is not enabled."}` and the panel explains what is missing.
 
 ## Known limits
 
@@ -65,6 +102,6 @@ Without both `AI_ENABLED=true` and a key the endpoint returns `503 {"detail": "T
 
 ## Tests
 
-- Backend: `make test`. Tools, the loop (with a scripted fake client), and the endpoint are covered in `apps/ai/tests/`.
+- Backend: `make test`. Tools, the loop (with a scripted `FakeProvider`), both provider adapters (with fake SDK clients that replay vendor quirks), provider configuration, and the endpoints are covered in `apps/ai/tests/`.
 - Frontend: `pnpm test` in `frontend/` covers the SSE parser and the chat reducer.
-- The real SDK was also checked against a local stub that speaks Anthropic's streaming wire format, through gunicorn and nginx. That run proved text arrives incrementally and deletes never execute.
+- Both real SDKs were also checked against local stub servers that speak Anthropic's streaming wire format and the OpenAI chat completions format (including a variant with every quirk above), through gunicorn, nginx and the Celery worker. Those runs proved text arrives incrementally, deletes never execute, malformed tool arguments are recovered from, and plan my week works with and without `json_schema` support. No real vendor API has been called yet.
