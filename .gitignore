@@ -10,7 +10,6 @@ build/
 .venv/
 venv/
 .uv/
-uv.lock
 
 # Django
 *.sqlite3

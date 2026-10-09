@@ -10,18 +10,19 @@ from apps.workspace.services.card_service import CardService
 
 class ColumnCardCreateView(APIView):
     def post(self, request, pk):
-        try:
-            column = Column.objects.get(id=pk)
-        except Column.DoesNotExist:
+        if not Column.objects.filter(id=pk).exists():
             raise Http404
-
-        last = Card.objects.filter(column=column).order_by("position").last()
-        next_position = (last.position + 1000) if last else 1000
 
         serializer = CardSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(column=column, position=next_position)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        data = serializer.validated_data
+
+        card = CardService.create_card(
+            column_id=pk,
+            title=data["title"],
+            description=data.get("description", ""),
+        )
+        return Response(CardSerializer(card).data, status=status.HTTP_201_CREATED)
 
 
 class CardDetailView(APIView):
@@ -41,16 +42,12 @@ class CardDetailView(APIView):
         serializer = CardDetailSerializer(card, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        extra = {}
-        if "content_markdown" in serializer.validated_data:
-            extra["content_preview"] = serializer.validated_data["content_markdown"][:200]
-
-        serializer.save(**extra)
-        return Response(serializer.data)
+        card = CardService.update_card(card.id, **serializer.validated_data)
+        return Response(CardDetailSerializer(card).data)
 
     def delete(self, request, pk):
         card = self._get_card(pk)
-        card.delete()
+        CardService.delete_card(card.id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

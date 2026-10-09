@@ -1,0 +1,48 @@
+import { api } from "./api"
+import type { AiStatus, ChatEvent, ChatTurn, PlanRun, SearchResult } from "@/types"
+import { createSSEParser } from "@/utils/sse"
+
+export const semanticSearch = (q: string) =>
+  api.get<SearchResult[]>(`/ai/search/`, { params: { q } }).then(r => r.data)
+
+export async function streamChat({
+  messages,
+  boardId,
+  signal,
+  onEvent,
+}: {
+  messages: ChatTurn[]
+  boardId?: string
+  signal: AbortSignal
+  onEvent: (event: ChatEvent) => void
+}) {
+  const response = await fetch(`${api.defaults.baseURL}ai/chat/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages, board_id: boardId }),
+    signal,
+  })
+
+  if (!response.ok || !response.body) {
+    const body = await response.json().catch(() => null)
+    throw new Error(body?.detail ?? `The assistant request failed (${response.status}).`)
+  }
+
+  const feed = createSSEParser((message) => onEvent(JSON.parse(message.data) as ChatEvent))
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    feed(decoder.decode(value, { stream: true }))
+  }
+}
+
+export const startPlan = (boardId: string, focus: string) =>
+  api.post<PlanRun>(`/ai/plans/`, { board_id: boardId, focus }).then(r => r.data)
+
+export const getRun = (id: string) =>
+  api.get<PlanRun>(`/ai/runs/${id}/`).then(r => r.data)
+
+export const getStatus = () =>
+  api.get<AiStatus>(`/ai/status/`).then(r => r.data)

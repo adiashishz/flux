@@ -17,6 +17,7 @@ import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-
 import { useQueryClient } from "@tanstack/react-query"
 import { Column } from "@/features/column/Column"
 import { AddColumnButton } from "@/features/column/components/AddColumnButton"
+import { useUIStore } from "@/store/ui"
 import { DragOverlayCard } from "@/features/card/components/DragOverlayCard"
 import { useBoard, boardKeys, useMoveColumn } from "@/hooks/queries/useBoards"
 import { useMoveCard } from "@/hooks/queries/useCards"
@@ -73,6 +74,7 @@ export function BoardView() {
   usePageTitle(board?.title ?? "")
 
   function handleDragStart(event: DragStartEvent) {
+    useUIStore.getState().setDragging(true)
     if (!board) return
     const type = event.active.data.current?.type as "card" | "column"
 
@@ -132,6 +134,7 @@ export function BoardView() {
     // Save before clearing — sourceColumnId is captured at drag start, before onDragOver mutations
     const savedItem = activeItem
     setActiveItem(null)
+    useUIStore.getState().setDragging(false)
 
     if (!over || !board) return
 
@@ -263,6 +266,7 @@ export function BoardView() {
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={handleDragStart}
+          onDragCancel={() => useUIStore.getState().setDragging(false)}
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >

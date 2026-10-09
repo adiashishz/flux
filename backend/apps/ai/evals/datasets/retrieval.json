@@ -1,0 +1,178 @@
+{
+  "queries": [
+    {
+      "q": "clients who haven't paid us yet",
+      "expected": [
+        "w01"
+      ]
+    },
+    {
+      "q": "the release pipeline keeps breaking",
+      "expected": [
+        "w02"
+      ]
+    },
+    {
+      "q": "slides for the leadership meeting about next quarter",
+      "expected": [
+        "w03"
+      ]
+    },
+    {
+      "q": "code review of the login changes",
+      "expected": [
+        "w04"
+      ]
+    },
+    {
+      "q": "welcome documentation for newcomers",
+      "expected": [
+        "w05"
+      ]
+    },
+    {
+      "q": "why is the dashboard so slow",
+      "expected": [
+        "w06"
+      ]
+    },
+    {
+      "q": "meet each team member to discuss their performance",
+      "expected": [
+        "w07"
+      ]
+    },
+    {
+      "q": "https certificate is about to expire",
+      "expected": [
+        "w09"
+      ]
+    },
+    {
+      "q": "customer was billed twice",
+      "expected": [
+        "w10"
+      ]
+    },
+    {
+      "q": "doctor visit for my teeth",
+      "expected": [
+        "h01"
+      ]
+    },
+    {
+      "q": "water dripping from the sink",
+      "expected": [
+        "h02"
+      ]
+    },
+    {
+      "q": "food shopping list",
+      "expected": [
+        "h03"
+      ]
+    },
+    {
+      "q": "travel document is almost expired",
+      "expected": [
+        "h04"
+      ]
+    },
+    {
+      "q": "celebrate my mother's birthday",
+      "expected": [
+        "h05"
+      ]
+    },
+    {
+      "q": "clear out the storage room with old stuff",
+      "expected": [
+        "h06"
+      ]
+    },
+    {
+      "q": "maintenance before the long drive",
+      "expected": [
+        "h08"
+      ]
+    },
+    {
+      "q": "airline tickets for the holiday",
+      "expected": [
+        "h09"
+      ]
+    },
+    {
+      "q": "water the plants",
+      "expected": [
+        "h10"
+      ]
+    },
+    {
+      "q": "database book about scaling systems",
+      "expected": [
+        "l01"
+      ]
+    },
+    {
+      "q": "learn analytical SQL queries",
+      "expected": [
+        "l02"
+      ]
+    },
+    {
+      "q": "how do nodes agree on a leader",
+      "expected": [
+        "l03"
+      ]
+    },
+    {
+      "q": "practise a foreign language",
+      "expected": [
+        "l04"
+      ]
+    },
+    {
+      "q": "memory safety in a systems language",
+      "expected": [
+        "l05"
+      ]
+    },
+    {
+      "q": "cloud provider exam preparation",
+      "expected": [
+        "l06"
+      ]
+    },
+    {
+      "q": "neural network architecture paper",
+      "expected": [
+        "l07"
+      ]
+    },
+    {
+      "q": "plan a household budget",
+      "expected": [
+        "l08"
+      ]
+    },
+    {
+      "q": "learn kubernetes",
+      "expected": [
+        "l09"
+      ]
+    },
+    {
+      "q": "presenting talks more confidently",
+      "expected": [
+        "l10"
+      ]
+    }
+  ],
+  "negatives": [
+    "quantum physics homework",
+    "recipe for chocolate cake",
+    "football match schedule",
+    "knitting patterns for beginners"
+  ]
+}

@@ -1,11 +1,23 @@
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
-from apps.workspace.models import Column
+from apps.workspace.models import Board, Column
 
 
 class ColumnService:
     POSITION_STEP = 1000
     REBALANCE_THRESHOLD = 10
+
+    @staticmethod
+    @transaction.atomic
+    def create_column(board_id, title):
+        try:
+            board = Board.objects.select_for_update().get(id=board_id)
+        except Board.DoesNotExist:
+            raise ValidationError({"board_id": "Board not found."})
+
+        last = Column.objects.filter(board=board).order_by("position").last()
+        position = (last.position + ColumnService.POSITION_STEP) if last else ColumnService.POSITION_STEP
+        return Column.objects.create(board=board, title=title, position=position)
 
     @staticmethod
     @transaction.atomic
